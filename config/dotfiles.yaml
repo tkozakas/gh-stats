@@ -1,37 +1,64 @@
-# Dotfiles Configuration
-# Showcase your development environment setup
-
-# Enable/disable dotfiles section
 enabled: true
+repository: "https://github.com/tkozakas/.dots"
 
-# Your dotfiles repository (for linking)
-repository: "https://github.com/yourusername/dotfiles"
-
-# Tools and their config files to showcase
 tools:
   - name: "Neovim"
     icon: "vim"
-    description: "My Neovim configuration with LSP, Treesitter, and custom keybindings"
-    configPath: "nvim/init.lua"
+    description: "LSP, Treesitter, custom keybindings"
+    configPath: "configs/nvim"
 
   - name: "Tmux"
     icon: "terminal"
-    description: "Terminal multiplexer setup with custom theme and bindings"
-    configPath: "tmux/.tmux.conf"
+    description: "Terminal multiplexer with custom theme"
+    configPath: "configs/tmux"
+
+  - name: "Kitty"
+    icon: "terminal"
+    description: "GPU-accelerated terminal emulator"
+    configPath: "configs/kitty"
 
   - name: "Zsh"
     icon: "terminal"
-    description: "Shell configuration with Oh My Zsh and custom aliases"
-    configPath: "zsh/.zshrc"
+    description: "Shell configuration with aliases"
+    configPath: "configs/zsh"
 
   - name: "Git"
     icon: "git"
-    description: "Git configuration with useful aliases"
-    configPath: "git/.gitconfig"
+    description: "Git configuration with aliases"
+    configPath: "configs/git"
 
-# Terminal setup
+  - name: "OpenCode"
+    icon: "code"
+    description: "AI coding assistant config"
+    configPath: "configs/opencode"
+
+  - name: "Lazygit"
+    icon: "git"
+    description: "Terminal UI for git"
+    configPath: "configs/lazygit"
+
+  - name: "K9s"
+    icon: "terminal"
+    description: "Kubernetes CLI manager"
+    configPath: "configs/k9s"
+
+  - name: "Aerospace"
+    icon: "window"
+    description: "macOS tiling window manager"
+    configPath: "configs/aerospace"
+
+  - name: "Fastfetch"
+    icon: "terminal"
+    description: "System info fetcher"
+    configPath: "configs/fastfetch"
+
+  - name: "Hyprland"
+    icon: "window"
+    description: "Wayland compositor config"
+    configPath: "configs/hypr"
+
 terminal:
   emulator: "Kitty"
   shell: "Zsh"
-  theme: "Catppuccin"
+  theme: "Gruvbox"
   font: "JetBrains Mono"
