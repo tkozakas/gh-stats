@@ -1,0 +1,25 @@
+services:
+  backend:
+    image: ghcr.io/tkozakas/me-site-backend:main
+    ports:
+      - "8080:8080"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_USERNAME=${GITHUB_USERNAME:-tkozakas}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+      - PORT=8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    image: ghcr.io/tkozakas/me-site-frontend:main
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
