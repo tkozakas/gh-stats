@@ -12,12 +12,14 @@ Personal GitHub stats dashboard with live updates and semantic commit search.
 ## Run
 
 ```bash
+export GITHUB_TOKEN=xxx
+
 # Development (build from source)
-GITHUB_TOKEN=xxx docker compose --profile dev up --build
+docker compose --profile dev up --build
 
 # Production (pre-built images, auto-updates)
 docker login ghcr.io -u tkozakas
-GITHUB_TOKEN=xxx docker compose --profile prod up -d
+docker compose --profile prod up -d
 ```
 
 Frontend: http://localhost:3000  
