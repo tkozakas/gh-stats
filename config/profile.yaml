@@ -1,47 +1,60 @@
-# Your Profile Configuration
-# Edit this file to customize your personal website
-
-name: "Your Name"
+name: "Tomas Kozakas"
 title: "Software Engineer"
-bio: "A brief description about yourself. What you do, what you're passionate about."
+bio: "Computer Science student at Vilnius University. Backend developer with experience in Java, Spring Boot, and cloud infrastructure."
 
-location: "San Francisco, CA"
-email: "you@example.com"
+location: "Vilnius, Lithuania"
+email: "tomas.kozakas@gmail.com"
 
-# Social links - leave empty or remove if not needed
 social:
-  github: "yourusername"
-  linkedin: "yourusername"
-  twitter: "yourusername"
+  github: "tkozakas"
+  linkedin: "tomas-kozakas"
+  twitter: ""
   website: ""
 
-# Skills/Technologies you work with
 skills:
-  - "TypeScript"
-  - "Go"
-  - "React"
-  - "Node.js"
+  - "Java"
+  - "Spring Boot"
+  - "C/C++"
   - "PostgreSQL"
+  - "MongoDB"
   - "Docker"
+  - "Kubernetes"
+  - "AWS"
+  - "Git"
 
-# Work experience (optional)
 experience:
-  - company: "Company Name"
-    role: "Senior Engineer"
-    period: "2022 - Present"
-    description: "Brief description of what you do/did"
-  - company: "Previous Company"
-    role: "Software Engineer"
-    period: "2020 - 2022"
-    description: "Brief description"
+  - company: "Visma"
+    role: "Junior Java Developer"
+    period: "Oct 2024 - Dec 2024"
+    description: "Developed API for data migration. Worked with IBM B2, WebSphere, Spring and Maven."
 
-# Projects to showcase (optional)
+  - company: "Zenitech"
+    role: "Software Engineer Intern"
+    period: "Jun 2024 - Aug 2024"
+    description: "Full-stack development with Java, Ruby on Rails, React. AWS infrastructure."
+
+  - company: "Visma"
+    role: "Java Developer Intern"
+    period: "Jun 2023 - Jul 2023"
+    description: "Microservice development. SQL and NoSQL databases."
+
 projects:
-  - name: "Project Name"
-    description: "What does this project do"
-    url: "https://github.com/you/project"
-    tech: ["TypeScript", "React"]
-  - name: "Another Project"
-    description: "Description here"
-    url: "https://github.com/you/another"
-    tech: ["Go", "PostgreSQL"]
+  - name: "Expense Management"
+    description: "Spring Boot backend for expense tracking app"
+    url: "https://github.com/tkozakas/impensa-server-spring"
+    tech: ["Spring Boot", "Java", "PostgreSQL", "Docker"]
+
+  - name: "Telegram Bot"
+    description: "Interactive bot with memes, news, text-to-speech"
+    url: "https://github.com/tkozakas/telegram-bot"
+    tech: ["Spring Boot", "Java", "PostgreSQL"]
+
+  - name: "Unix Shell"
+    description: "Custom shell with job control and signal handling"
+    url: "https://github.com/tkozakas/shIl"
+    tech: ["C++", "CMake"]
+
+  - name: "8086 Disassembler"
+    description: "Translates machine code to assembly"
+    url: "https://github.com/tkozakas/8086-com-dissasembler"
+    tech: ["x86 Assembly"]
