@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { getProfile } from "@/lib/config";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export async function generateMetadata(): Promise<Metadata> {
-  const profile = getProfile();
-  return {
-    title: `${profile.name} - ${profile.title}`,
-    description: profile.bio,
-  };
-}
+export const metadata: Metadata = {
+  title: ".dotfiles",
+  description: "Terminal setup and configurations",
+};
 
 export default function RootLayout({
   children,

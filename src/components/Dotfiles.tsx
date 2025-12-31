@@ -1,64 +1,58 @@
-import type { DotfilesConfig } from "@/lib/types";
+import type { DotfilesConfig, Tool } from "@/lib/types";
 
 interface DotfilesProps {
   config: DotfilesConfig;
 }
 
-export function Dotfiles({ config }: DotfilesProps) {
-  if (!config.enabled) return null;
+function ToolCard({ tool, repoUrl }: { tool: Tool; repoUrl: string }) {
+  const configUrl = `${repoUrl}/tree/master/${tool.configPath}`;
+  const displayName = tool.name.charAt(0).toUpperCase() + tool.name.slice(1);
 
   return (
-    <section>
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-2xl font-semibold">Dotfiles</h2>
-        <a
-          href={config.repository}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-neutral-400 hover:text-neutral-100"
-        >
-          View Repository →
-        </a>
-      </div>
+    <a
+      href={configUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group relative overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/50 p-6 transition-all duration-300 hover:border-neutral-600 hover:bg-neutral-900 hover:shadow-lg hover:shadow-neutral-900/50"
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-neutral-800/0 to-neutral-800/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-      <div className="mt-4 rounded border border-neutral-800 bg-neutral-900 p-4">
-        <h3 className="text-sm font-medium text-neutral-400">Terminal Setup</h3>
-        <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-          <div>
-            <span className="text-neutral-500">Emulator:</span>{" "}
-            <span>{config.terminal.emulator}</span>
-          </div>
-          <div>
-            <span className="text-neutral-500">Shell:</span>{" "}
-            <span>{config.terminal.shell}</span>
-          </div>
-          <div>
-            <span className="text-neutral-500">Theme:</span>{" "}
-            <span>{config.terminal.theme}</span>
-          </div>
-          <div>
-            <span className="text-neutral-500">Font:</span>{" "}
-            <span>{config.terminal.font}</span>
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-neutral-200 transition-colors group-hover:text-white">
+            {displayName}
+          </h3>
+          <div className="flex gap-1">
+            {tool.os.includes("darwin") && (
+              <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400">
+                
+              </span>
+            )}
+            {tool.os.includes("linux") && (
+              <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400">
+                
+              </span>
+            )}
           </div>
         </div>
-      </div>
 
-      <div className="mt-4 space-y-3">
-        {config.tools.map((tool) => (
-          <div
-            key={tool.name}
-            className="flex items-start justify-between rounded border border-neutral-800 p-4"
-          >
-            <div>
-              <h3 className="font-medium">{tool.name}</h3>
-              <p className="mt-1 text-sm text-neutral-400">
-                {tool.description}
-              </p>
-            </div>
-            <code className="text-xs text-neutral-500">{tool.configPath}</code>
-          </div>
-        ))}
+        <div className="mt-4 flex items-center gap-2 text-xs text-neutral-600 transition-colors group-hover:text-neutral-500">
+          <span className="font-mono">{tool.configPath}</span>
+          <span className="opacity-0 transition-opacity group-hover:opacity-100">
+            →
+          </span>
+        </div>
       </div>
-    </section>
+    </a>
+  );
+}
+
+export function Dotfiles({ config }: DotfilesProps) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {config.tools.map((tool) => (
+        <ToolCard key={tool.name} tool={tool} repoUrl={config.repository} />
+      ))}
+    </div>
   );
 }

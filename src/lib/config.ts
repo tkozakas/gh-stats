@@ -1,18 +1,43 @@
-import fs from "fs";
-import path from "path";
 import yaml from "js-yaml";
-import type { Profile, DotfilesConfig } from "./types";
+import type { DotfilesYaml, DotfilesConfig, Tool } from "./types";
 
-const configDir = path.join(process.cwd(), "config");
+const REPO = "tkozakas/.dots";
+const REPO_URL = `https://github.com/${REPO}`;
+const RAW_URL = `https://raw.githubusercontent.com/${REPO}/master`;
 
-export function getProfile(): Profile {
-  const filePath = path.join(configDir, "profile.yaml");
-  const fileContents = fs.readFileSync(filePath, "utf8");
-  return yaml.load(fileContents) as Profile;
-}
+export async function getDotfilesConfig(): Promise<DotfilesConfig> {
+  const response = await fetch(`${RAW_URL}/dotfiles.yaml`);
+  const text = await response.text();
+  const data = yaml.load(text) as DotfilesYaml;
 
-export function getDotfilesConfig(): DotfilesConfig {
-  const filePath = path.join(configDir, "dotfiles.yaml");
-  const fileContents = fs.readFileSync(filePath, "utf8");
-  return yaml.load(fileContents) as DotfilesConfig;
+  const toolMap = new Map<string, Tool>();
+
+  for (const symlink of data.symlinks) {
+    const match = symlink.source.match(/^configs\/([^/]+)/);
+    if (!match) continue;
+
+    const toolName = match[1];
+    const existing = toolMap.get(toolName);
+
+    if (existing) {
+      for (const os of symlink.os) {
+        if (!existing.os.includes(os)) {
+          existing.os.push(os);
+        }
+      }
+    } else {
+      toolMap.set(toolName, {
+        name: toolName,
+        configPath: `configs/${toolName}`,
+        os: [...symlink.os],
+      });
+    }
+  }
+
+  return {
+    repository: REPO_URL,
+    tools: Array.from(toolMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    ),
+  };
 }
