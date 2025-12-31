@@ -33,7 +33,7 @@ export function RecentCommits({ commits }: RecentCommitsProps) {
             className="group flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-neutral-800/50"
           >
             <div className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-neutral-300 group-hover:text-white">
                   {commit.repo}
