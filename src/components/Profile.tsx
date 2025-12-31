@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { GitHubProfile } from "@/lib/types";
 
 interface ProfileProps {
@@ -7,10 +8,12 @@ interface ProfileProps {
 export function Profile({ profile }: ProfileProps) {
   return (
     <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-      <img
+      <Image
         src={profile.avatarUrl}
         alt={profile.name}
-        className="h-32 w-32 rounded-full border-2 border-neutral-800"
+        width={128}
+        height={128}
+        className="rounded-full border-2 border-neutral-800"
       />
       <div className="text-center sm:text-left">
         <h1 className="text-3xl font-bold text-neutral-100">{profile.name}</h1>
