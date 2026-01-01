@@ -323,7 +323,13 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 	commits := h.store.GetCommits(cacheKey)
 
 	if stats == nil {
-		http.Error(w, "stats not available", http.StatusServiceUnavailable)
+		fallbackKey := username + ":public"
+		stats = h.store.GetStats(fallbackKey)
+		commits = h.store.GetCommits(fallbackKey)
+	}
+
+	if stats == nil {
+		http.Error(w, "stats not available, fetch user stats first", http.StatusServiceUnavailable)
 		return
 	}
 

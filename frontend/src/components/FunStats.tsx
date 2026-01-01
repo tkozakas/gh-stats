@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import type { FunStats as FunStatsType } from "@/lib/types";
-import { getUserFunStats } from "@/lib/api";
+import { getUserFunStats, type Visibility } from "@/lib/api";
 
 interface FunStatsProps {
   username: string;
-  visibility?: "public" | "private" | "all";
+  visibility?: Visibility;
 }
 
 function FunStatsSkeleton() {
@@ -78,12 +78,17 @@ function FunStatsSkeleton() {
 export function FunStats({ username, visibility = "public" }: FunStatsProps) {
   const [stats, setStats] = useState<FunStatsType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     getUserFunStats(username, visibility)
       .then(setStats)
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err);
+        setError(err.message);
+      })
       .finally(() => setLoading(false));
   }, [username, visibility]);
 
@@ -91,7 +96,7 @@ export function FunStats({ username, visibility = "public" }: FunStatsProps) {
     return <FunStatsSkeleton />;
   }
 
-  if (!stats) return null;
+  if (error || !stats) return null;
 
   const maxHourCommits = Math.max(...Object.values(stats.commitsByHour || {}), 1);
   const maxDayCommits = Math.max(...Object.values(stats.commitsByDayOfWeek || {}), 1);

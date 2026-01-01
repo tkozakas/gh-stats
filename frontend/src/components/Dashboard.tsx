@@ -44,6 +44,17 @@ function StreakStatsSkeleton() {
   );
 }
 
+function RefetchingOverlay() {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-neutral-950/60 backdrop-blur-[2px]">
+      <div className="flex items-center gap-2 rounded-lg bg-neutral-800/90 px-3 py-2 text-sm text-neutral-300">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-600 border-t-emerald-400" />
+        Updating...
+      </div>
+    </div>
+  );
+}
+
 function LanguagesSkeleton() {
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6">
@@ -228,17 +239,20 @@ export function Dashboard({ username }: DashboardProps) {
           </div>
         ) : (
           <>
-            {loading && !stats ? (
+            {!stats ? (
               <ProfileSkeleton />
-            ) : stats ? (
-              <Profile 
-                profile={stats.profile} 
-                ranking={ranking}
-                onFollowersClick={() => setModal("followers")}
-                onFollowingClick={() => setModal("following")}
-                onReposClick={() => reposRef.current?.scrollIntoView({ behavior: "smooth" })}
-              />
-            ) : null}
+            ) : (
+              <div className="relative">
+                {loading && <RefetchingOverlay />}
+                <Profile 
+                  profile={stats.profile} 
+                  ranking={ranking}
+                  onFollowersClick={() => setModal("followers")}
+                  onFollowingClick={() => setModal("following")}
+                  onReposClick={() => reposRef.current?.scrollIntoView({ behavior: "smooth" })}
+                />
+              </div>
+            )}
 
             {modal && (
               <UserListModal
@@ -253,22 +267,28 @@ export function Dashboard({ username }: DashboardProps) {
             )}
 
             <div className="mt-12 space-y-8">
-              {loading && !stats ? (
+              {!stats ? (
                 <StreakStatsSkeleton />
-              ) : stats ? (
-                <StreakStats streak={stats.streak} />
-              ) : null}
+              ) : (
+                <div className="relative">
+                  {loading && <RefetchingOverlay />}
+                  <StreakStats streak={stats.streak} />
+                </div>
+              )}
 
               <FunStats username={username} visibility={isOwnProfile ? visibility : "public"} />
 
-              {loading && !stats ? (
+              {!stats ? (
                 <ContributionGraphSkeleton />
-              ) : stats ? (
-                <ContributionGraph contributions={stats.contributions} loading={loading} />
-              ) : null}
+              ) : (
+                <div className="relative">
+                  {loading && <RefetchingOverlay />}
+                  <ContributionGraph contributions={stats.contributions} />
+                </div>
+              )}
 
               <div className="grid gap-8 lg:grid-cols-2">
-                {loading && !stats ? (
+                {!stats ? (
                   <>
                     <LanguagesSkeleton />
                     <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6">
@@ -283,53 +303,62 @@ export function Dashboard({ username }: DashboardProps) {
                       </div>
                     </div>
                   </>
-                ) : stats ? (
+                ) : (
                   <>
-                    <Languages
-                      languages={stats.languages}
-                      selectedLanguage={selectedLanguage}
-                      onLanguageClick={setSelectedLanguage}
-                    />
-                    <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6">
-                      <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-                        Stats
-                      </h2>
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-neutral-400">Repositories shown</span>
-                          <span className="text-neutral-200">
-                            {stats.repositories.length}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-neutral-400">Last updated</span>
-                          <span className="text-neutral-200">
-                            {new Date(stats.updatedAt).toLocaleString()}
-                          </span>
-                        </div>
-                        {selectedLanguage && (
+                    <div className="relative">
+                      {loading && <RefetchingOverlay />}
+                      <Languages
+                        languages={stats.languages}
+                        selectedLanguage={selectedLanguage}
+                        onLanguageClick={setSelectedLanguage}
+                      />
+                    </div>
+                    <div className="relative">
+                      {loading && <RefetchingOverlay />}
+                      <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6">
+                        <h2 className="mb-4 text-lg font-semibold text-neutral-200">
+                          Stats
+                        </h2>
+                        <div className="space-y-3 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-neutral-400">Filtered by</span>
-                            <span className="text-neutral-200">{selectedLanguage}</span>
+                            <span className="text-neutral-400">Repositories shown</span>
+                            <span className="text-neutral-200">
+                              {stats.repositories.length}
+                            </span>
                           </div>
-                        )}
-                        {isOwnProfile && (
                           <div className="flex justify-between">
-                            <span className="text-neutral-400">Visibility</span>
-                            <span className="text-emerald-400 capitalize">{visibility}</span>
+                            <span className="text-neutral-400">Last updated</span>
+                            <span className="text-neutral-200">
+                              {new Date(stats.updatedAt).toLocaleString()}
+                            </span>
                           </div>
-                        )}
+                          {selectedLanguage && (
+                            <div className="flex justify-between">
+                              <span className="text-neutral-400">Filtered by</span>
+                              <span className="text-neutral-200">{selectedLanguage}</span>
+                            </div>
+                          )}
+                          {isOwnProfile && (
+                            <div className="flex justify-between">
+                              <span className="text-neutral-400">Visibility</span>
+                              <span className="text-emerald-400 capitalize">{visibility}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </>
-                ) : null}
+                )}
               </div>
 
-              {loading && !stats ? (
+              {!stats ? (
                 <TopReposSkeleton />
-              ) : stats ? (
-                <TopRepos repositories={stats.repositories} />
-              ) : null}
+              ) : (
+                <div className="relative">
+                  {loading && <RefetchingOverlay />}
+                  <TopRepos repositories={stats.repositories} />
+                </div>
+              )}
 
               <div ref={reposRef}>
                 <RepositoryList username={username} visibility={isOwnProfile ? visibility : "public"} />

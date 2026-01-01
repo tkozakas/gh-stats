@@ -2,7 +2,6 @@ import type { ContributionWeek } from "@/lib/types";
 
 interface ContributionGraphProps {
   contributions: ContributionWeek[];
-  loading?: boolean;
 }
 
 const levelColors = [
@@ -13,44 +12,7 @@ const levelColors = [
   "bg-emerald-400",
 ];
 
-function ContributionSkeleton() {
-  return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6">
-      <div className="mb-4 h-6 w-44 animate-pulse rounded bg-neutral-800" />
-      <div className="overflow-x-auto">
-        <div className="flex gap-1">
-          {Array.from({ length: 52 }).map((_, weekIndex) => (
-            <div key={weekIndex} className="flex flex-col gap-1">
-              {Array.from({ length: 7 }).map((_, dayIndex) => (
-                <div
-                  key={dayIndex}
-                  className="h-3 w-3 animate-pulse rounded-sm bg-neutral-800"
-                  style={{
-                    animationDelay: `${(weekIndex * 7 + dayIndex) * 2}ms`,
-                    opacity: 0.3 + Math.random() * 0.7,
-                  }}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="mt-4 flex items-center justify-end gap-2 text-xs text-neutral-500">
-        <span>Less</span>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-3 w-3 animate-pulse rounded-sm bg-neutral-800" style={{ animationDelay: `${i * 50}ms` }} />
-        ))}
-        <span>More</span>
-      </div>
-    </div>
-  );
-}
-
-export function ContributionGraph({ contributions, loading }: ContributionGraphProps) {
-  if (loading) {
-    return <ContributionSkeleton />;
-  }
-
+export function ContributionGraph({ contributions }: ContributionGraphProps) {
   if (!contributions?.length) return null;
 
   const recentWeeks = contributions.slice(-52);

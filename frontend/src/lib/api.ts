@@ -11,6 +11,8 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
+export type Visibility = "public" | "private" | "all";
+
 export async function searchUsers(query: string): Promise<UserSearchResult> {
   const res = await fetch(`${API_URL}/api/users/search?q=${encodeURIComponent(query)}`, {
     credentials: "include",
@@ -24,7 +26,7 @@ export async function searchUsers(query: string): Promise<UserSearchResult> {
 export async function getUserStats(
   username: string,
   language?: string,
-  visibility?: "public" | "private" | "all"
+  visibility?: Visibility
 ): Promise<GitHubStats> {
   const params = new URLSearchParams();
   if (language) params.set("language", language);
@@ -50,7 +52,7 @@ export async function getUserStats(
 export async function getUserRepositories(
   username: string,
   query?: string,
-  visibility?: "public" | "private" | "all"
+  visibility?: Visibility
 ): Promise<RepositoriesResult> {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
@@ -80,7 +82,7 @@ export async function getUserRepoStats(username: string, repo: string): Promise<
 
 export async function getUserFunStats(
   username: string,
-  visibility?: "public" | "private" | "all"
+  visibility?: Visibility
 ): Promise<FunStats> {
   const params = new URLSearchParams();
   if (visibility) params.set("visibility", visibility);
