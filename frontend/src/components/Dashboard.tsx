@@ -63,6 +63,7 @@ export function Dashboard({ username }: DashboardProps) {
             login={login}
             logout={logout}
             onBack={() => router.push("/")}
+            onProfile={() => auth.username && router.push(`/${auth.username}`)}
           />
           <div className="rounded-xl border border-red-900 bg-red-950/50 p-6 text-center">
             <p className="text-red-400">{error}</p>
@@ -90,6 +91,7 @@ export function Dashboard({ username }: DashboardProps) {
           login={login}
           logout={logout}
           onBack={() => router.push("/")}
+          onProfile={() => auth.username && router.push(`/${auth.username}`)}
           isOwnProfile={isOwnProfile}
         />
 
@@ -167,10 +169,11 @@ interface HeaderProps {
   login: () => void;
   logout: () => Promise<void>;
   onBack: () => void;
+  onProfile: () => void;
   isOwnProfile?: boolean;
 }
 
-function Header({ auth, login, logout, onBack, isOwnProfile }: HeaderProps) {
+function Header({ auth, login, logout, onBack, onProfile, isOwnProfile }: HeaderProps) {
   return (
     <div className="mb-8 flex items-center justify-between">
       <button
@@ -187,7 +190,10 @@ function Header({ auth, login, logout, onBack, isOwnProfile }: HeaderProps) {
         )}
         {auth.authenticated ? (
           <>
-            <div className="flex items-center gap-2 text-sm text-neutral-400">
+            <button
+              onClick={onProfile}
+              className="flex items-center gap-2 text-sm text-neutral-400 hover:text-neutral-200"
+            >
               {auth.avatar_url && (
                 <img
                   src={auth.avatar_url}
@@ -196,7 +202,7 @@ function Header({ auth, login, logout, onBack, isOwnProfile }: HeaderProps) {
                 />
               )}
               {auth.username}
-            </div>
+            </button>
             <button
               onClick={logout}
               className="text-sm text-neutral-500 hover:text-neutral-300"

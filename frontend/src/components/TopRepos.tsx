@@ -5,6 +5,8 @@ interface TopReposProps {
 }
 
 export function TopRepos({ repositories }: TopReposProps) {
+  if (!repositories?.length) return null;
+
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6">
       <h2 className="mb-4 text-lg font-semibold text-neutral-200">

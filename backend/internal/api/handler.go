@@ -145,7 +145,19 @@ func (h *Handler) GetUserRepositories(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stats := h.store.GetStats(username)
+	session := h.getSession(r)
+	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
+
+	cacheKey := username
+	if isOwnProfile {
+		cacheKey = username + ":auth"
+	}
+
+	stats := h.store.GetStats(cacheKey)
+	if stats == nil {
+		// Try without auth suffix as fallback
+		stats = h.store.GetStats(username)
+	}
 	if stats == nil {
 		http.Error(w, "stats not available, fetch user stats first", http.StatusServiceUnavailable)
 		return
@@ -182,7 +194,18 @@ func (h *Handler) GetUserRepoStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stats := h.store.GetStats(username)
+	session := h.getSession(r)
+	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
+
+	cacheKey := username
+	if isOwnProfile {
+		cacheKey = username + ":auth"
+	}
+
+	stats := h.store.GetStats(cacheKey)
+	if stats == nil {
+		stats = h.store.GetStats(username)
+	}
 	if stats == nil {
 		http.Error(w, "stats not available", http.StatusServiceUnavailable)
 		return
@@ -201,7 +224,10 @@ func (h *Handler) GetUserRepoStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	commits := h.store.GetCommits(username)
+	commits := h.store.GetCommits(cacheKey)
+	if commits == nil {
+		commits = h.store.GetCommits(username)
+	}
 	var repoCommits []github.Commit
 	for _, c := range commits {
 		if strings.EqualFold(c.Repo, repoName) {
@@ -247,15 +273,28 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stats := h.store.GetStats(username)
-	commits := h.store.GetCommits(username)
+	session := h.getSession(r)
+	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
+
+	cacheKey := username
+	if isOwnProfile {
+		cacheKey = username + ":auth"
+	}
+
+	stats := h.store.GetStats(cacheKey)
+	if stats == nil {
+		stats = h.store.GetStats(username)
+	}
+	commits := h.store.GetCommits(cacheKey)
+	if commits == nil {
+		commits = h.store.GetCommits(username)
+	}
 
 	if stats == nil {
 		http.Error(w, "stats not available", http.StatusServiceUnavailable)
 		return
 	}
 
-	// If commits haven't loaded yet, return partial stats
 	if commits == nil {
 		commits = []github.Commit{}
 	}

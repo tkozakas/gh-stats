@@ -19,8 +19,8 @@ export function RepositoryList({ username }: RepositoryListProps) {
     const timeout = setTimeout(() => {
       setLoading(true);
       getUserRepositories(username, query || undefined)
-        .then((data) => setRepos(data.repositories))
-        .catch(console.error)
+        .then((data) => setRepos(data.repositories || []))
+        .catch(() => setRepos([]))
         .finally(() => setLoading(false));
     }, 300);
 

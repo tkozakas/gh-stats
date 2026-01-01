@@ -11,6 +11,8 @@ export function Languages({
   selectedLanguage,
   onLanguageClick,
 }: LanguagesProps) {
+  if (!languages?.length) return null;
+
   const handleClick = (langName: string) => {
     if (!onLanguageClick) return;
     const isDeselecting = selectedLanguage === langName;

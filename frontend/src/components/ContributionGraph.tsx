@@ -13,6 +13,8 @@ const levelColors = [
 ];
 
 export function ContributionGraph({ contributions }: ContributionGraphProps) {
+  if (!contributions?.length) return null;
+
   const recentWeeks = contributions.slice(-52);
 
   return (

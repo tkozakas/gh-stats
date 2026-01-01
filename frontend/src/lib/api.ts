@@ -10,7 +10,9 @@ import type {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export async function searchUsers(query: string): Promise<UserSearchResult> {
-  const res = await fetch(`${API_URL}/api/users/search?q=${encodeURIComponent(query)}`);
+  const res = await fetch(`${API_URL}/api/users/search?q=${encodeURIComponent(query)}`, {
+    credentials: "include",
+  });
   if (!res.ok) {
     throw new Error(`Failed to search users: ${res.statusText}`);
   }
