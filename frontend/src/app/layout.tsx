@@ -6,8 +6,29 @@ import { AuthProvider } from "@/lib/context/AuthContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "gh-stats",
-  description: "GitHub stats for any user",
+  title: "GitHub Stats",
+  description: "GitHub analytics dashboard. Explore contributions, languages, streaks, and more for any GitHub user.",
+  openGraph: {
+    title: "GitHub Stats",
+    description: "GitHub analytics dashboard. Explore contributions, languages, streaks, and more for any GitHub user.",
+    url: "https://ghstats.fun",
+    siteName: "GitHub Stats",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "GitHub Stats Dashboard Preview",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GitHub Stats",
+    description: "GitHub analytics dashboard. Explore contributions, languages, streaks, and more for any GitHub user.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
