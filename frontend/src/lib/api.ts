@@ -7,7 +7,7 @@ import type {
   AuthStatus,
 } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export async function searchUsers(query: string): Promise<UserSearchResult> {
   const res = await fetch(`${API_URL}/api/users/search?q=${encodeURIComponent(query)}`, {
