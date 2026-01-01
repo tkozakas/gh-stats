@@ -15,18 +15,35 @@ import (
 )
 
 type Handler struct {
-	store       *cache.Store
-	oauth       *github.OAuthConfig
-	frontendURL string
-	ranking     *github.RankingService
+	store            *cache.Store
+	oauth            *github.OAuthConfig
+	frontendURL      string
+	ranking          *github.RankingService
+	publicClient     *github.Client
+	publicTokenOwner string // username of the GITHUB_TOKEN owner (to prevent exposing their private data)
 }
 
-func NewHandler(store *cache.Store, oauth *github.OAuthConfig, frontendURL string) *Handler {
+func NewHandler(store *cache.Store, oauth *github.OAuthConfig, frontendURL string, githubToken string) *Handler {
+	var publicClient *github.Client
+	var publicTokenOwner string
+
+	if githubToken != "" {
+		publicClient = github.NewClient(githubToken)
+		if profile, err := publicClient.GetProfile(""); err == nil {
+			publicTokenOwner = profile.Login
+			log.Printf("GITHUB_TOKEN owner: %s (their private data protected from public access)", publicTokenOwner)
+		}
+	} else {
+		publicClient = github.NewPublicClient()
+	}
+
 	return &Handler{
-		store:       store,
-		oauth:       oauth,
-		frontendURL: frontendURL,
-		ranking:     github.NewRankingService(),
+		store:            store,
+		oauth:            oauth,
+		frontendURL:      frontendURL,
+		ranking:          github.NewRankingService(),
+		publicClient:     publicClient,
+		publicTokenOwner: publicTokenOwner,
 	}
 }
 
@@ -87,7 +104,7 @@ func (h *Handler) GetUserStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := h.getClientForRequest(r)
+	client := h.getClientForUser(r, username)
 	session := h.getSession(r)
 	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
 
@@ -415,7 +432,7 @@ func (h *Handler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := h.getClientForRequest(r)
+	client := h.getClientForUser(r, username)
 	followers, err := client.GetFollowers(username)
 	if err != nil {
 		log.Printf("get followers error: %v", err)
@@ -441,7 +458,7 @@ func (h *Handler) GetUserFollowing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := h.getClientForRequest(r)
+	client := h.getClientForUser(r, username)
 	following, err := client.GetFollowing(username)
 	if err != nil {
 		log.Printf("get following error: %v", err)

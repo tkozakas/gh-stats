@@ -19,6 +19,7 @@ func main() {
 	clientSecret := os.Getenv("GITHUB_CLIENT_SECRET")
 	redirectURL := os.Getenv("GITHUB_REDIRECT_URL")
 	frontendURL := os.Getenv("FRONTEND_URL")
+	githubToken := os.Getenv("GITHUB_TOKEN")
 
 	if redirectURL == "" {
 		redirectURL = "http://localhost:8080/api/auth/callback"
@@ -42,7 +43,13 @@ func main() {
 		log.Println("OAuth disabled (no GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET)")
 	}
 
-	handler := api.NewHandler(store, oauth, frontendURL)
+	if githubToken != "" {
+		log.Println("GitHub token configured for public requests (5000 req/hour)")
+	} else {
+		log.Println("Warning: No GITHUB_TOKEN set, public requests limited to 60 req/hour")
+	}
+
+	handler := api.NewHandler(store, oauth, frontendURL, githubToken)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

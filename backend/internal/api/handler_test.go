@@ -15,7 +15,7 @@ import (
 
 func newTestHandler() *Handler {
 	store := cache.New()
-	return NewHandler(store, nil, "http://localhost:3000")
+	return NewHandler(store, nil, "http://localhost:3000", "")
 }
 
 func TestNewHandler_ReturnsHandler(t *testing.T) {
@@ -23,7 +23,7 @@ func TestNewHandler_ReturnsHandler(t *testing.T) {
 	oauth := &github.OAuthConfig{ClientID: "test"}
 	frontendURL := "http://localhost:3000"
 
-	handler := NewHandler(store, oauth, frontendURL)
+	handler := NewHandler(store, oauth, frontendURL, "")
 
 	if handler == nil {
 		t.Fatal("expected handler to be non-nil")

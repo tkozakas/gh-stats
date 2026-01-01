@@ -170,5 +170,16 @@ func (h *Handler) getClientForRequest(r *http.Request) *github.Client {
 	if session != nil {
 		return github.NewClient(session.AccessToken)
 	}
-	return github.NewPublicClient()
+	return h.publicClient
+}
+
+func (h *Handler) getClientForUser(r *http.Request, targetUsername string) *github.Client {
+	session := h.getSession(r)
+	if session != nil {
+		return github.NewClient(session.AccessToken)
+	}
+	if h.publicTokenOwner != "" && strings.EqualFold(h.publicTokenOwner, targetUsername) {
+		return github.NewPublicClient()
+	}
+	return h.publicClient
 }
