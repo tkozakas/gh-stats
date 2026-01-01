@@ -40,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await apiLogout();
     setAuth({ authenticated: false });
+    window.location.href = "/";
   };
 
   return (
