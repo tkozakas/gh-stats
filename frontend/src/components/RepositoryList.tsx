@@ -7,9 +7,10 @@ import { RepoDetail } from "./RepoDetail";
 
 interface RepositoryListProps {
   username: string;
+  visibility?: "public" | "private" | "all";
 }
 
-export function RepositoryList({ username }: RepositoryListProps) {
+export function RepositoryList({ username, visibility = "public" }: RepositoryListProps) {
   const [repos, setRepos] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -18,14 +19,14 @@ export function RepositoryList({ username }: RepositoryListProps) {
   useEffect(() => {
     const timeout = setTimeout(() => {
       setLoading(true);
-      getUserRepositories(username, query || undefined)
+      getUserRepositories(username, query || undefined, visibility)
         .then((data) => setRepos(data.repositories || []))
         .catch(() => setRepos([]))
         .finally(() => setLoading(false));
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [username, query]);
+  }, [username, query, visibility]);
 
   if (selectedRepo) {
     return <RepoDetail username={username} name={selectedRepo} onClose={() => setSelectedRepo(null)} />;

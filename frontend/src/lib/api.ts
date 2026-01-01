@@ -49,12 +49,15 @@ export async function getUserStats(
 
 export async function getUserRepositories(
   username: string,
-  query?: string
+  query?: string,
+  visibility?: "public" | "private" | "all"
 ): Promise<RepositoriesResult> {
-  let endpoint = `${API_URL}/api/users/${username}/repositories`;
-  if (query) {
-    endpoint += `?q=${encodeURIComponent(query)}`;
-  }
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  if (visibility) params.set("visibility", visibility);
+
+  const queryStr = params.toString();
+  const endpoint = `${API_URL}/api/users/${username}/repositories${queryStr ? `?${queryStr}` : ""}`;
 
   const res = await fetch(endpoint, { credentials: "include" });
   if (!res.ok) {
@@ -75,8 +78,17 @@ export async function getUserRepoStats(username: string, repo: string): Promise<
   return res.json();
 }
 
-export async function getUserFunStats(username: string): Promise<FunStats> {
-  const res = await fetch(`${API_URL}/api/users/${username}/fun`, {
+export async function getUserFunStats(
+  username: string,
+  visibility?: "public" | "private" | "all"
+): Promise<FunStats> {
+  const params = new URLSearchParams();
+  if (visibility) params.set("visibility", visibility);
+
+  const query = params.toString();
+  const endpoint = `${API_URL}/api/users/${username}/fun${query ? `?${query}` : ""}`;
+
+  const res = await fetch(endpoint, {
     credentials: "include",
   });
   if (!res.ok) {

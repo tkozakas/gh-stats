@@ -124,7 +124,7 @@ func TestHandler_GetUserRepositories_ReturnsServiceUnavailableWithoutCache(t *te
 
 func TestHandler_GetUserRepositories_ReturnsRepositoriesFromCache(t *testing.T) {
 	handler := newTestHandler()
-	handler.store.SetStats("testuser", &github.Stats{
+	handler.store.SetStats("testuser:public", &github.Stats{
 		Repositories: []github.Repository{
 			{Name: "repo1", Language: "Go"},
 			{Name: "repo2", Language: "TypeScript"},
@@ -153,7 +153,7 @@ func TestHandler_GetUserRepositories_ReturnsRepositoriesFromCache(t *testing.T) 
 
 func TestHandler_GetUserRepositories_FiltersRepositoriesByQuery(t *testing.T) {
 	handler := newTestHandler()
-	handler.store.SetStats("testuser", &github.Stats{
+	handler.store.SetStats("testuser:public", &github.Stats{
 		Repositories: []github.Repository{
 			{Name: "awesome-go", Language: "Go"},
 			{Name: "react-app", Language: "TypeScript"},

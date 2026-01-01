@@ -6,18 +6,20 @@ import { getUserFunStats } from "@/lib/api";
 
 interface FunStatsProps {
   username: string;
+  visibility?: "public" | "private" | "all";
 }
 
-export function FunStats({ username }: FunStatsProps) {
+export function FunStats({ username, visibility = "public" }: FunStatsProps) {
   const [stats, setStats] = useState<FunStatsType | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getUserFunStats(username)
+    setLoading(true);
+    getUserFunStats(username, visibility)
       .then(setStats)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [username]);
+  }, [username, visibility]);
 
   if (loading) {
     return (

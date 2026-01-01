@@ -5,6 +5,9 @@ import type { GitHubProfile, UserRanking } from "@/lib/types";
 interface ProfileProps {
   profile: GitHubProfile;
   ranking?: UserRanking | null;
+  onFollowersClick?: () => void;
+  onFollowingClick?: () => void;
+  onReposClick?: () => void;
 }
 
 function formatCountryName(country: string): string {
@@ -14,7 +17,7 @@ function formatCountryName(country: string): string {
     .join(" ");
 }
 
-export function Profile({ profile, ranking }: ProfileProps) {
+export function Profile({ profile, ranking, onFollowersClick, onFollowingClick, onReposClick }: ProfileProps) {
   return (
     <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
       <Image
@@ -71,24 +74,33 @@ export function Profile({ profile, ranking }: ProfileProps) {
           )}
         </div>
         <div className="mt-4 flex justify-center gap-6 sm:justify-start">
-          <div className="text-center">
+          <button 
+            onClick={onFollowersClick}
+            className="text-center transition-colors hover:text-emerald-400"
+          >
             <div className="text-2xl font-bold text-neutral-100">
               {profile.followers}
             </div>
             <div className="text-xs text-neutral-500">followers</div>
-          </div>
-          <div className="text-center">
+          </button>
+          <button 
+            onClick={onFollowingClick}
+            className="text-center transition-colors hover:text-emerald-400"
+          >
             <div className="text-2xl font-bold text-neutral-100">
               {profile.following}
             </div>
             <div className="text-xs text-neutral-500">following</div>
-          </div>
-          <div className="text-center">
+          </button>
+          <button 
+            onClick={onReposClick}
+            className="text-center transition-colors hover:text-emerald-400"
+          >
             <div className="text-2xl font-bold text-neutral-100">
               {profile.public_repos}
             </div>
             <div className="text-xs text-neutral-500">repos</div>
-          </div>
+          </button>
           {ranking && (
             <div className="text-center">
               <div className="text-2xl font-bold text-amber-400">

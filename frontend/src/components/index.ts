@@ -8,3 +8,4 @@ export { Dashboard } from "./Dashboard";
 export { FunStats } from "./FunStats";
 export { RepositoryList } from "./RepositoryList";
 export { RepoDetail } from "./RepoDetail";
+export { UserListModal } from "./UserListModal";

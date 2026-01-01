@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import type { GitHubStats, UserRanking } from "@/lib/types";
@@ -13,6 +13,7 @@ import { Languages } from "./Languages";
 import { TopRepos } from "./TopRepos";
 import { FunStats } from "./FunStats";
 import { RepositoryList } from "./RepositoryList";
+import { UserListModal } from "./UserListModal";
 
 interface DashboardProps {
   username: string;
@@ -33,9 +34,12 @@ export function Dashboard({ username }: DashboardProps) {
   const [stats, setStats] = useState<GitHubStats | null>(null);
   const [ranking, setRanking] = useState<UserRanking | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refetching, setRefetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [visibility, setVisibility] = useState<Visibility>("public");
+  const [modal, setModal] = useState<"followers" | "following" | null>(null);
+  const reposRef = useRef<HTMLDivElement>(null);
   const { auth, login, logout } = useAuth();
   const router = useRouter();
 
@@ -51,7 +55,11 @@ export function Dashboard({ username }: DashboardProps) {
 
   const fetchStats = useCallback(async () => {
     try {
-      setLoading(true);
+      if (stats) {
+        setRefetching(true);
+      } else {
+        setLoading(true);
+      }
       const data = await getUserStats(
         username,
         selectedLanguage ?? undefined,
@@ -63,6 +71,7 @@ export function Dashboard({ username }: DashboardProps) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       setLoading(false);
+      setRefetching(false);
     }
   }, [username, selectedLanguage, visibility, isOwnProfile]);
 
@@ -138,7 +147,28 @@ export function Dashboard({ username }: DashboardProps) {
           onVisibilityChange={isOwnProfile ? setVisibility : undefined}
         />
 
-        <Profile profile={stats.profile} ranking={ranking} />
+        {refetching && (
+          <div className="mb-4 flex items-center justify-center gap-2 rounded-lg bg-neutral-800/50 py-2 text-sm text-neutral-400">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-600 border-t-neutral-300" />
+            Updating...
+          </div>
+        )}
+
+        <Profile 
+          profile={stats.profile} 
+          ranking={ranking}
+          onFollowersClick={() => setModal("followers")}
+          onFollowingClick={() => setModal("following")}
+          onReposClick={() => reposRef.current?.scrollIntoView({ behavior: "smooth" })}
+        />
+
+        {modal && (
+          <UserListModal
+            username={username}
+            type={modal}
+            onClose={() => setModal(null)}
+          />
+        )}
 
         {!auth.authenticated && (
           <LoginBanner login={login} />
@@ -146,7 +176,7 @@ export function Dashboard({ username }: DashboardProps) {
 
         <div className="mt-12 space-y-8">
           <StreakStats streak={stats.streak} />
-          <FunStats username={username} />
+          <FunStats username={username} visibility={isOwnProfile ? visibility : "public"} />
           <ContributionGraph contributions={stats.contributions} />
 
           <div className="grid gap-8 lg:grid-cols-2">
@@ -189,7 +219,9 @@ export function Dashboard({ username }: DashboardProps) {
           </div>
 
           <TopRepos repositories={stats.repositories} />
-          <RepositoryList username={username} />
+          <div ref={reposRef}>
+            <RepositoryList username={username} visibility={isOwnProfile ? visibility : "public"} />
+          </div>
         </div>
 
         <footer className="mt-20 border-t border-neutral-900 pt-8 text-center text-sm text-neutral-600">

@@ -178,18 +178,20 @@ func (h *Handler) GetUserRepositories(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	visibility := r.URL.Query().Get("visibility")
+	if visibility == "" {
+		visibility = "public"
+	}
+
 	session := h.getSession(r)
 	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
 
-	cacheKey := username
+	cacheKey := username + ":" + visibility
 	if isOwnProfile {
-		cacheKey = username + ":auth"
+		cacheKey = username + ":auth:" + visibility
 	}
 
 	stats := h.store.GetStats(cacheKey)
-	if stats == nil {
-		stats = h.store.GetStats(username)
-	}
 	if stats == nil {
 		http.Error(w, "stats not available, fetch user stats first", http.StatusServiceUnavailable)
 		return
@@ -226,18 +228,20 @@ func (h *Handler) GetUserRepoStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	visibility := r.URL.Query().Get("visibility")
+	if visibility == "" {
+		visibility = "public"
+	}
+
 	session := h.getSession(r)
 	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
 
-	cacheKey := username
+	cacheKey := username + ":" + visibility
 	if isOwnProfile {
-		cacheKey = username + ":auth"
+		cacheKey = username + ":auth:" + visibility
 	}
 
 	stats := h.store.GetStats(cacheKey)
-	if stats == nil {
-		stats = h.store.GetStats(username)
-	}
 	if stats == nil {
 		http.Error(w, "stats not available", http.StatusServiceUnavailable)
 		return
@@ -257,9 +261,6 @@ func (h *Handler) GetUserRepoStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	commits := h.store.GetCommits(cacheKey)
-	if commits == nil {
-		commits = h.store.GetCommits(username)
-	}
 	var repoCommits []github.Commit
 	for _, c := range commits {
 		if strings.EqualFold(c.Repo, repoName) {
@@ -305,22 +306,21 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	visibility := r.URL.Query().Get("visibility")
+	if visibility == "" {
+		visibility = "public"
+	}
+
 	session := h.getSession(r)
 	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
 
-	cacheKey := username
+	cacheKey := username + ":" + visibility
 	if isOwnProfile {
-		cacheKey = username + ":auth"
+		cacheKey = username + ":auth:" + visibility
 	}
 
 	stats := h.store.GetStats(cacheKey)
-	if stats == nil {
-		stats = h.store.GetStats(username)
-	}
 	commits := h.store.GetCommits(cacheKey)
-	if commits == nil {
-		commits = h.store.GetCommits(username)
-	}
 
 	if stats == nil {
 		http.Error(w, "stats not available", http.StatusServiceUnavailable)
