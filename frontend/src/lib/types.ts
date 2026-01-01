@@ -65,12 +65,6 @@ export interface GitHubStats {
   updatedAt: string;
 }
 
-export interface SearchResult {
-  query: string;
-  count: number;
-  results: Commit[];
-}
-
 export interface RepoStats {
   repository: Repository;
   commits: Commit[];

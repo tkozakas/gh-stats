@@ -43,7 +43,6 @@ func main() {
 	r.Use(corsMiddleware)
 
 	r.Get("/api/stats", handler.GetStats)
-	r.Get("/api/search", handler.Search)
 	r.Get("/api/repositories", handler.GetRepositories)
 	r.Get("/api/repo", handler.GetRepoStats)
 	r.Get("/api/fun", handler.GetFunStats)

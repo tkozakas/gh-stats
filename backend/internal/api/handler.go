@@ -14,7 +14,6 @@ import (
 
 	"me-site/backend/internal/cache"
 	"me-site/backend/internal/github"
-	"me-site/backend/internal/search"
 )
 
 type Handler struct {
@@ -66,38 +65,6 @@ func filterStatsByLanguage(stats *github.Stats, lang string) *github.Stats {
 	return &filtered
 }
 
-func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query().Get("q")
-	if query == "" {
-		http.Error(w, "query parameter 'q' required", http.StatusBadRequest)
-		return
-	}
-
-	commits := h.store.GetCommits()
-	if commits == nil {
-		http.Error(w, "commits not indexed yet", http.StatusServiceUnavailable)
-		return
-	}
-
-	results, err := search.FilterCommits(commits, query)
-	if err != nil {
-		log.Printf("search error: %v", err)
-		http.Error(w, "search failed", http.StatusInternalServerError)
-		return
-	}
-
-	if len(results) > 50 {
-		results = results[:50]
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"query":   query,
-		"count":   len(results),
-		"results": results,
-	})
-}
-
 func (h *Handler) Webhook(w http.ResponseWriter, r *http.Request) {
 	if h.webhookSecret != "" {
 		signature := r.Header.Get("X-Hub-Signature-256")
@@ -147,12 +114,6 @@ func (h *Handler) RefreshStats() error {
 	} else {
 		h.store.SetCommits(commits)
 		log.Printf("Fetched %d commits", len(commits))
-
-		go func() {
-			if err := search.BuildIndex(commits); err != nil {
-				log.Printf("Warning: failed to build search index: %v", err)
-			}
-		}()
 	}
 
 	log.Println("Stats refreshed successfully")

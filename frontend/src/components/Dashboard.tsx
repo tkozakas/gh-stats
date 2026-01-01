@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { GitHubStats, Commit } from "@/lib/types";
+import type { GitHubStats } from "@/lib/types";
 import { getStats } from "@/lib/api";
 import { Profile } from "./Profile";
 import { StreakStats } from "./StreakStats";
 import { ContributionGraph } from "./ContributionGraph";
 import { Languages } from "./Languages";
 import { TopRepos } from "./TopRepos";
-import { SearchBar } from "./SearchBar";
-import { SearchResults } from "./SearchResults";
 import { FunStats } from "./FunStats";
 import { RepositoryList } from "./RepositoryList";
 
@@ -18,7 +16,6 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
-  const [searchResults, setSearchResults] = useState<Commit[]>([]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -36,14 +33,6 @@ export function Dashboard() {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
-
-  const handleSearch = (results: Commit[]) => {
-    setSearchResults(results);
-  };
-
-  const clearSearch = () => {
-    setSearchResults([]);
-  };
 
   if (loading && !stats) {
     return (
@@ -81,15 +70,6 @@ export function Dashboard() {
     <main className="min-h-screen bg-neutral-950">
       <div className="mx-auto max-w-6xl px-6 py-16">
         <Profile profile={stats.profile} />
-
-        <div className="mt-8">
-          <SearchBar onResults={handleSearch} />
-          {searchResults.length > 0 && (
-            <div className="mt-4">
-              <SearchResults results={searchResults} onClose={clearSearch} />
-            </div>
-          )}
-        </div>
 
         <div className="mt-12 space-y-8">
           <StreakStats streak={stats.streak} />
