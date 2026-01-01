@@ -20,12 +20,12 @@ export async function searchUsers(query: string): Promise<UserSearchResult> {
 }
 
 export async function getUserStats(username: string, language?: string): Promise<GitHubStats> {
-  const url = new URL(`${API_URL}/api/users/${username}/stats`);
+  let endpoint = `${API_URL}/api/users/${username}/stats`;
   if (language) {
-    url.searchParams.set("language", language);
+    endpoint += `?language=${encodeURIComponent(language)}`;
   }
 
-  const res = await fetch(url.toString(), {
+  const res = await fetch(endpoint, {
     credentials: "include",
     next: { revalidate: 60 },
   });
@@ -43,12 +43,12 @@ export async function getUserRepositories(
   username: string,
   query?: string
 ): Promise<RepositoriesResult> {
-  const url = new URL(`${API_URL}/api/users/${username}/repositories`);
+  let endpoint = `${API_URL}/api/users/${username}/repositories`;
   if (query) {
-    url.searchParams.set("q", query);
+    endpoint += `?q=${encodeURIComponent(query)}`;
   }
 
-  const res = await fetch(url.toString(), { credentials: "include" });
+  const res = await fetch(endpoint, { credentials: "include" });
   if (!res.ok) {
     throw new Error(`Failed to fetch repositories: ${res.statusText}`);
   }
