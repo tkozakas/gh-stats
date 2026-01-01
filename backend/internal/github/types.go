@@ -26,6 +26,7 @@ type Repository struct {
 	UpdatedAt   string `json:"updated_at"`
 	Fork        bool   `json:"fork"`
 	Archived    bool   `json:"archived"`
+	Private     bool   `json:"private"`
 }
 
 type Commit struct {

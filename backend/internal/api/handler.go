@@ -76,19 +76,33 @@ func (h *Handler) GetUserStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	visibility := r.URL.Query().Get("visibility")
+	if visibility == "" {
+		visibility = "public"
+	}
+	if visibility != "public" && visibility != "private" && visibility != "all" {
+		http.Error(w, "visibility must be public, private, or all", http.StatusBadRequest)
+		return
+	}
+
 	client := h.getClientForRequest(r)
 	session := h.getSession(r)
 	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
 
-	cacheKey := username
+	if (visibility == "private" || visibility == "all") && !isOwnProfile {
+		http.Error(w, "private visibility only available for your own profile", http.StatusForbidden)
+		return
+	}
+
+	cacheKey := username + ":" + visibility
 	if isOwnProfile {
-		cacheKey = username + ":auth"
+		cacheKey = username + ":auth:" + visibility
 	}
 
 	stats := h.store.GetStats(cacheKey)
 	if stats == nil {
 		var err error
-		stats, err = client.GetStats(username)
+		stats, err = client.GetStatsWithVisibility(username, visibility)
 		if err != nil {
 			log.Printf("get stats error for %s: %v", username, err)
 			if strings.Contains(err.Error(), "not found") {
@@ -155,7 +169,6 @@ func (h *Handler) GetUserRepositories(w http.ResponseWriter, r *http.Request) {
 
 	stats := h.store.GetStats(cacheKey)
 	if stats == nil {
-		// Try without auth suffix as fallback
 		stats = h.store.GetStats(username)
 	}
 	if stats == nil {

@@ -2,6 +2,7 @@ package github
 
 import (
 	"fmt"
+	"net/url"
 	"sort"
 	"time"
 )
@@ -19,12 +20,28 @@ func (c *Client) GetProfile(username string) (*Profile, error) {
 }
 
 func (c *Client) GetRepositories(username string) ([]Repository, error) {
+	return c.GetRepositoriesWithVisibility(username, "public")
+}
+
+func (c *Client) GetRepositoriesWithVisibility(username string, visibility string) ([]Repository, error) {
 	var allRepos []Repository
 	page := 1
 
 	for {
 		var repos []Repository
-		endpoint := fmt.Sprintf("/users/%s/repos?sort=updated&per_page=100&page=%d", username, page)
+		var endpoint string
+
+		if visibility == "all" || visibility == "private" {
+			endpoint = fmt.Sprintf("/user/repos?sort=updated&per_page=100&page=%d&affiliation=owner", page)
+			if visibility == "all" {
+				endpoint += "&visibility=all"
+			} else {
+				endpoint += "&visibility=private"
+			}
+		} else {
+			endpoint = fmt.Sprintf("/users/%s/repos?sort=updated&per_page=100&page=%d", username, page)
+		}
+
 		if err := c.request(endpoint, &repos); err != nil {
 			return allRepos, err
 		}
@@ -35,6 +52,12 @@ func (c *Client) GetRepositories(username string) ([]Repository, error) {
 
 		for _, r := range repos {
 			if !r.Fork && !r.Archived {
+				if visibility == "private" && !r.Private {
+					continue
+				}
+				if visibility == "public" && r.Private {
+					continue
+				}
 				allRepos = append(allRepos, r)
 			}
 		}
@@ -193,22 +216,35 @@ func (c *Client) GetAllCommits(username string, repos []Repository) ([]Commit, e
 }
 
 func (c *Client) GetStats(username string) (*Stats, error) {
+	return c.GetStatsWithVisibility(username, "public")
+}
+
+func (c *Client) GetStatsWithVisibility(username string, visibility string) (*Stats, error) {
 	profile, err := c.GetProfile(username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile: %w", err)
 	}
 
-	repos, err := c.GetRepositories(username)
+	repos, err := c.GetRepositoriesWithVisibility(username, visibility)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get repositories: %w", err)
+	}
+	if repos == nil {
+		repos = []Repository{}
 	}
 
 	contributions, total, err := c.GetContributions(username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contributions: %w", err)
 	}
+	if contributions == nil {
+		contributions = []ContributionWeek{}
+	}
 
 	languages := c.CalculateLanguages(username, repos)
+	if languages == nil {
+		languages = []LanguageStats{}
+	}
 	streak := calculateStreak(contributions, total)
 
 	return &Stats{
@@ -320,7 +356,7 @@ func (c *Client) SearchUsers(query string) ([]Profile, error) {
 	var result struct {
 		Items []Profile `json:"items"`
 	}
-	endpoint := fmt.Sprintf("/search/users?q=%s&per_page=20", query)
+	endpoint := fmt.Sprintf("/search/users?q=%s&per_page=20", url.QueryEscape(query))
 	if err := c.request(endpoint, &result); err != nil {
 		return nil, err
 	}
