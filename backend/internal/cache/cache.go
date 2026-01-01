@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"me-site/backend/internal/github"
+	"gh-stats/backend/internal/github"
 )
 
 type Store struct {

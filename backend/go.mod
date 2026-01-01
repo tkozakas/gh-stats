@@ -1,4 +1,4 @@
-module me-site/backend
+module gh-stats/backend
 
 go 1.23
 

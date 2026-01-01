@@ -1,4 +1,4 @@
-# me-site
+# gh-stats
 
 Personal GitHub stats dashboard.
 

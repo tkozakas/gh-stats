@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"me-site/backend/internal/cache"
-	"me-site/backend/internal/github"
+	"gh-stats/backend/internal/cache"
+	"gh-stats/backend/internal/github"
 )
 
 type Handler struct {

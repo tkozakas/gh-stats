@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"me-site/backend/internal/api"
-	"me-site/backend/internal/cache"
-	"me-site/backend/internal/github"
+	"gh-stats/backend/internal/api"
+	"gh-stats/backend/internal/cache"
+	"gh-stats/backend/internal/github"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

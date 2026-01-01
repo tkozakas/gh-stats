@@ -32,7 +32,7 @@ services:
   backend-prod:
     <<: *backend
     profiles: ["prod"]
-    image: ghcr.io/tkozakas/me-site-backend:main
+    image: ghcr.io/tkozakas/gh-stats-backend:main
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
@@ -53,7 +53,7 @@ services:
   frontend-prod:
     <<: *frontend
     profiles: ["prod"]
-    image: ghcr.io/tkozakas/me-site-frontend:main
+    image: ghcr.io/tkozakas/gh-stats-frontend:main
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     depends_on:
