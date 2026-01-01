@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import type { GitHubStats } from "@/lib/types";
 import { getUserStats } from "@/lib/api";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -195,10 +196,12 @@ function Header({ auth, login, logout, onBack, onProfile, isOwnProfile }: Header
               className="flex items-center gap-2 text-sm text-neutral-400 hover:text-neutral-200"
             >
               {auth.avatar_url && (
-                <img
+                <Image
                   src={auth.avatar_url}
                   alt=""
-                  className="h-5 w-5 rounded-full"
+                  width={20}
+                  height={20}
+                  className="rounded-full"
                 />
               )}
               {auth.username}

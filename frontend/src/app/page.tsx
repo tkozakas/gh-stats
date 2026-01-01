@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/lib/context/AuthContext";
 import { searchUsers } from "@/lib/api";
 import type { UserSearchResult } from "@/lib/types";
@@ -103,7 +104,7 @@ export default function Home() {
               className="flex items-center gap-2 rounded-full bg-neutral-800/80 px-4 py-2 text-sm text-neutral-200 ring-1 ring-neutral-700 transition-all hover:bg-neutral-700 hover:ring-neutral-600"
             >
               {auth.avatar_url && (
-                <img src={auth.avatar_url} alt="" className="h-6 w-6 rounded-full" />
+                <Image src={auth.avatar_url} alt="" width={24} height={24} className="rounded-full" />
               )}
               <span>{auth.username}</span>
             </button>
@@ -172,10 +173,12 @@ export default function Home() {
                   onClick={() => handleUserClick(user.login)}
                   className="group flex items-center gap-4 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 text-left transition-all hover:border-neutral-700 hover:bg-neutral-800/50"
                 >
-                  <img
+                  <Image
                     src={user.avatar_url}
                     alt=""
-                    className="h-12 w-12 rounded-full ring-2 ring-neutral-800 transition-all group-hover:ring-neutral-700"
+                    width={48}
+                    height={48}
+                    className="rounded-full ring-2 ring-neutral-800 transition-all group-hover:ring-neutral-700"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-white truncate">{user.login}</div>
