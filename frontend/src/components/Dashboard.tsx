@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import type { GitHubStats } from "@/lib/types";
-import { getStats } from "@/lib/api";
+import { getUserStats } from "@/lib/api";
+import { useAuth } from "@/lib/context/AuthContext";
 import { Profile } from "./Profile";
 import { StreakStats } from "./StreakStats";
 import { ContributionGraph } from "./ContributionGraph";
@@ -11,16 +13,22 @@ import { TopRepos } from "./TopRepos";
 import { FunStats } from "./FunStats";
 import { RepositoryList } from "./RepositoryList";
 
-export function Dashboard() {
+interface DashboardProps {
+  username: string;
+}
+
+export function Dashboard({ username }: DashboardProps) {
   const [stats, setStats] = useState<GitHubStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const { auth, login, logout } = useAuth();
+  const router = useRouter();
 
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getStats(selectedLanguage ?? undefined);
+      const data = await getUserStats(username, selectedLanguage ?? undefined);
       setStats(data);
       setError(null);
     } catch (err) {
@@ -28,7 +36,7 @@ export function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [selectedLanguage]);
+  }, [username, selectedLanguage]);
 
   useEffect(() => {
     fetchStats();
@@ -50,6 +58,12 @@ export function Dashboard() {
     return (
       <main className="min-h-screen bg-neutral-950">
         <div className="mx-auto max-w-6xl px-6 py-16">
+          <Header
+            auth={auth}
+            login={login}
+            logout={logout}
+            onBack={() => router.push("/")}
+          />
           <div className="rounded-xl border border-red-900 bg-red-950/50 p-6 text-center">
             <p className="text-red-400">{error}</p>
             <button
@@ -66,14 +80,28 @@ export function Dashboard() {
 
   if (!stats) return null;
 
+  const isOwnProfile = auth.authenticated && auth.username?.toLowerCase() === username.toLowerCase();
+
   return (
     <main className="min-h-screen bg-neutral-950">
       <div className="mx-auto max-w-6xl px-6 py-16">
+        <Header
+          auth={auth}
+          login={login}
+          logout={logout}
+          onBack={() => router.push("/")}
+          isOwnProfile={isOwnProfile}
+        />
+
         <Profile profile={stats.profile} />
+
+        {!auth.authenticated && (
+          <LoginBanner login={login} />
+        )}
 
         <div className="mt-12 space-y-8">
           <StreakStats streak={stats.streak} />
-          <FunStats />
+          <FunStats username={username} />
           <ContributionGraph contributions={stats.contributions} />
 
           <div className="grid gap-8 lg:grid-cols-2">
@@ -105,12 +133,18 @@ export function Dashboard() {
                     <span className="text-neutral-200">{selectedLanguage}</span>
                   </div>
                 )}
+                {isOwnProfile && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">View mode</span>
+                    <span className="text-emerald-400">Private</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           <TopRepos repositories={stats.repositories} />
-          <RepositoryList />
+          <RepositoryList username={username} />
         </div>
 
         <footer className="mt-20 border-t border-neutral-900 pt-8 text-center text-sm text-neutral-600">
@@ -125,5 +159,83 @@ export function Dashboard() {
         </footer>
       </div>
     </main>
+  );
+}
+
+interface HeaderProps {
+  auth: { authenticated: boolean; username?: string; avatar_url?: string };
+  login: () => void;
+  logout: () => Promise<void>;
+  onBack: () => void;
+  isOwnProfile?: boolean;
+}
+
+function Header({ auth, login, logout, onBack, isOwnProfile }: HeaderProps) {
+  return (
+    <div className="mb-8 flex items-center justify-between">
+      <button
+        onClick={onBack}
+        className="text-sm text-neutral-400 hover:text-neutral-200"
+      >
+        ← Back to search
+      </button>
+      <div className="flex items-center gap-4">
+        {isOwnProfile && (
+          <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs text-emerald-400">
+            Your Profile
+          </span>
+        )}
+        {auth.authenticated ? (
+          <>
+            <div className="flex items-center gap-2 text-sm text-neutral-400">
+              {auth.avatar_url && (
+                <img
+                  src={auth.avatar_url}
+                  alt=""
+                  className="h-5 w-5 rounded-full"
+                />
+              )}
+              {auth.username}
+            </div>
+            <button
+              onClick={logout}
+              className="text-sm text-neutral-500 hover:text-neutral-300"
+            >
+              Logout
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={login}
+            className="rounded-lg bg-neutral-800 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-700"
+          >
+            Login
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LoginBanner({ login }: { login: () => void }) {
+  return (
+    <div className="mt-6 rounded-xl border border-neutral-700 bg-gradient-to-r from-neutral-900 to-neutral-800 p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm text-neutral-200">
+            Want to see private contributions?
+          </p>
+          <p className="text-xs text-neutral-500">
+            Login with GitHub to view your complete stats including private repos
+          </p>
+        </div>
+        <button
+          onClick={login}
+          className="shrink-0 rounded-lg bg-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-600"
+        >
+          Login with GitHub
+        </button>
+      </div>
+    </div>
   );
 }

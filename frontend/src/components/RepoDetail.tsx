@@ -2,23 +2,24 @@
 
 import { useState, useEffect } from "react";
 import type { RepoStats as RepoStatsType } from "@/lib/types";
-import { getRepoStats } from "@/lib/api";
+import { getUserRepoStats } from "@/lib/api";
 
 interface RepoDetailProps {
+  username: string;
   name: string;
   onClose: () => void;
 }
 
-export function RepoDetail({ name, onClose }: RepoDetailProps) {
+export function RepoDetail({ username, name, onClose }: RepoDetailProps) {
   const [stats, setStats] = useState<RepoStatsType | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getRepoStats(name)
+    getUserRepoStats(username, name)
       .then(setStats)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [name]);
+  }, [username, name]);
 
   if (loading) {
     return (

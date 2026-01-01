@@ -2,18 +2,22 @@
 
 import { useState, useEffect } from "react";
 import type { FunStats as FunStatsType } from "@/lib/types";
-import { getFunStats } from "@/lib/api";
+import { getUserFunStats } from "@/lib/api";
 
-export function FunStats() {
+interface FunStatsProps {
+  username: string;
+}
+
+export function FunStats({ username }: FunStatsProps) {
   const [stats, setStats] = useState<FunStatsType | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getFunStats()
+    getUserFunStats(username)
       .then(setStats)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [username]);
 
   if (loading) {
     return (

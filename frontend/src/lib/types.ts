@@ -96,3 +96,18 @@ export interface RepositoriesResult {
   count: number;
   repositories: Repository[];
 }
+
+export interface UserSearchResult {
+  count: number;
+  users: {
+    login: string;
+    avatar_url: string;
+    type: string;
+  }[];
+}
+
+export interface AuthStatus {
+  authenticated: boolean;
+  username?: string;
+  avatar_url?: string;
+}

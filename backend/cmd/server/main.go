@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
+	"strings"
 
 	"gh-stats/backend/internal/api"
 	"gh-stats/backend/internal/cache"
@@ -15,38 +15,53 @@ import (
 )
 
 func main() {
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		log.Fatal("GITHUB_TOKEN environment variable required")
+	clientID := os.Getenv("GITHUB_CLIENT_ID")
+	clientSecret := os.Getenv("GITHUB_CLIENT_SECRET")
+	redirectURL := os.Getenv("GITHUB_REDIRECT_URL")
+	frontendURL := os.Getenv("FRONTEND_URL")
+
+	if redirectURL == "" {
+		redirectURL = "http://localhost:8080/api/auth/callback"
+	}
+	if frontendURL == "" {
+		frontendURL = "http://localhost:3000"
 	}
 
-	username := os.Getenv("GITHUB_USERNAME")
-	if username == "" {
-		username = "tkozakas"
-	}
-
-	webhookSecret := os.Getenv("WEBHOOK_SECRET")
-
-	gh := github.NewClient(token, username)
 	store := cache.New()
-	handler := api.NewHandler(gh, store, webhookSecret)
 
-	if err := handler.RefreshStats(); err != nil {
-		log.Printf("Warning: initial stats fetch failed: %v", err)
+	var oauth *github.OAuthConfig
+	if clientID != "" && clientSecret != "" {
+		oauth = &github.OAuthConfig{
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+			RedirectURL:  redirectURL,
+			Scopes:       []string{"read:user", "repo"},
+		}
+		log.Println("OAuth enabled")
+	} else {
+		log.Println("OAuth disabled (no GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET)")
 	}
 
-	go scheduleDailyRefresh(handler)
+	handler := api.NewHandler(store, oauth, frontendURL)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(corsMiddleware)
 
-	r.Get("/api/stats", handler.GetStats)
-	r.Get("/api/repositories", handler.GetRepositories)
-	r.Get("/api/repo", handler.GetRepoStats)
-	r.Get("/api/fun", handler.GetFunStats)
-	r.Post("/api/webhook/github", handler.Webhook)
+	r.Get("/api/auth/login", handler.Login)
+	r.Get("/api/auth/callback", handler.Callback)
+	r.Post("/api/auth/logout", handler.Logout)
+	r.Get("/api/auth/me", handler.Me)
+
+	r.Get("/api/users/search", handler.SearchUsers)
+	r.Get("/api/users/{username}/stats", handler.GetUserStats)
+	r.Get("/api/users/{username}/repositories", handler.GetUserRepositories)
+	r.Get("/api/users/{username}/repos/{repo}", handler.GetUserRepoStats)
+	r.Get("/api/users/{username}/fun", handler.GetUserFunStats)
+	r.Get("/api/users/{username}/followers", handler.GetUserFollowers)
+	r.Get("/api/users/{username}/following", handler.GetUserFollowing)
+
 	r.Get("/health", handler.Health)
 
 	port := os.Getenv("PORT")
@@ -61,10 +76,22 @@ func main() {
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
+	allowedOrigins := strings.Split(os.Getenv("CORS_ORIGINS"), ",")
+	if len(allowedOrigins) == 0 || allowedOrigins[0] == "" {
+		allowedOrigins = []string{"http://localhost:3000"}
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+		for _, allowed := range allowedOrigins {
+			if origin == strings.TrimSpace(allowed) {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				break
+			}
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -73,14 +100,4 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
-}
-
-func scheduleDailyRefresh(handler *api.Handler) {
-	ticker := time.NewTicker(24 * time.Hour)
-	for range ticker.C {
-		log.Println("Running scheduled daily refresh...")
-		if err := handler.RefreshStats(); err != nil {
-			log.Printf("Scheduled refresh failed: %v", err)
-		}
-	}
 }

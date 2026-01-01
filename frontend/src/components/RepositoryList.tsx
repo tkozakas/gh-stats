@@ -2,10 +2,14 @@
 
 import { useState, useEffect } from "react";
 import type { Repository } from "@/lib/types";
-import { getRepositories } from "@/lib/api";
+import { getUserRepositories } from "@/lib/api";
 import { RepoDetail } from "./RepoDetail";
 
-export function RepositoryList() {
+interface RepositoryListProps {
+  username: string;
+}
+
+export function RepositoryList({ username }: RepositoryListProps) {
   const [repos, setRepos] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -14,17 +18,17 @@ export function RepositoryList() {
   useEffect(() => {
     const timeout = setTimeout(() => {
       setLoading(true);
-      getRepositories(query || undefined)
+      getUserRepositories(username, query || undefined)
         .then((data) => setRepos(data.repositories))
         .catch(console.error)
         .finally(() => setLoading(false));
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [query]);
+  }, [username, query]);
 
   if (selectedRepo) {
-    return <RepoDetail name={selectedRepo} onClose={() => setSelectedRepo(null)} />;
+    return <RepoDetail username={username} name={selectedRepo} onClose={() => setSelectedRepo(null)} />;
   }
 
   return (

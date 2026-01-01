@@ -95,3 +95,31 @@ type FunStats struct {
 	NightOwlPercent       float64        `json:"nightOwlPercent"`
 	EarlyBirdPercent      float64        `json:"earlyBirdPercent"`
 }
+
+type UserSearchResult struct {
+	Login     string `json:"login"`
+	AvatarURL string `json:"avatar_url"`
+	Type      string `json:"type"`
+}
+
+type Session struct {
+	ID          string    `json:"id"`
+	Username    string    `json:"username"`
+	AccessToken string    `json:"-"`
+	AvatarURL   string    `json:"avatar_url"`
+	CreatedAt   time.Time `json:"created_at"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}
+
+type OAuthConfig struct {
+	ClientID     string
+	ClientSecret string
+	RedirectURL  string
+	Scopes       []string
+}
+
+type OAuthTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	Scope       string `json:"scope"`
+}

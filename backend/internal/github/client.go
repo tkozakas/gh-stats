@@ -8,33 +8,47 @@ import (
 	"time"
 )
 
+const (
+	_defaultTimeout = 30 * time.Second
+	_githubAPIURL   = "https://api.github.com"
+	_githubGraphQL  = "https://api.github.com/graphql"
+)
+
 type Client struct {
-	token    string
-	username string
-	http     *http.Client
+	token string
+	http  *http.Client
 }
 
-func NewClient(token, username string) *Client {
+func NewClient(token string) *Client {
 	return &Client{
-		token:    token,
-		username: username,
-		http:     &http.Client{Timeout: 30 * time.Second},
+		token: token,
+		http:  &http.Client{Timeout: _defaultTimeout},
 	}
 }
 
-func (c *Client) Username() string {
-	return c.username
+func NewPublicClient() *Client {
+	return &Client{
+		token: "",
+		http:  &http.Client{Timeout: _defaultTimeout},
+	}
+}
+
+func (c *Client) WithToken(token string) *Client {
+	return &Client{
+		token: token,
+		http:  c.http,
+	}
 }
 
 func (c *Client) request(endpoint string, result any) error {
-	url := "https://api.github.com" + endpoint
-
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", _githubAPIURL+endpoint, nil)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 
 	resp, err := c.http.Do(req)
@@ -42,6 +56,10 @@ func (c *Client) request(endpoint string, result any) error {
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("not found")
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -56,8 +74,6 @@ func (c *Client) graphql(query string, result any) error {
 }
 
 func (c *Client) graphqlWithVars(query string, variables map[string]any, result any) error {
-	url := "https://api.github.com/graphql"
-
 	payload := map[string]any{"query": query}
 	if variables != nil {
 		payload["variables"] = variables
@@ -68,13 +84,15 @@ func (c *Client) graphqlWithVars(query string, variables map[string]any, result 
 		return err
 	}
 
-	req, err := http.NewRequest("POST", url, nil)
+	req, err := http.NewRequest("POST", _githubGraphQL, nil)
 	if err != nil {
 		return err
 	}
 
 	req.Body = io.NopCloser(jsonReader(body))
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)

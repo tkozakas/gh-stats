@@ -1,11 +1,7 @@
 package api
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"sort"
@@ -14,20 +10,32 @@ import (
 
 	"gh-stats/backend/internal/cache"
 	"gh-stats/backend/internal/github"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
-	gh            *github.Client
-	store         *cache.Store
-	webhookSecret string
+	store       *cache.Store
+	oauth       *github.OAuthConfig
+	frontendURL string
 }
 
-func NewHandler(gh *github.Client, store *cache.Store, webhookSecret string) *Handler {
+func NewHandler(store *cache.Store, oauth *github.OAuthConfig, frontendURL string) *Handler {
 	return &Handler{
-		gh:            gh,
-		store:         store,
-		webhookSecret: webhookSecret,
+		store:       store,
+		oauth:       oauth,
+		frontendURL: frontendURL,
 	}
+}
+
+func (h *Handler) writeRateLimitError(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusTooManyRequests)
+	json.NewEncoder(w).Encode(map[string]any{
+		"error":          "rate_limited",
+		"message":        "GitHub API rate limit exceeded. Please login for higher limits.",
+		"login_required": true,
+	})
 }
 
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
@@ -35,11 +43,76 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("ok"))
 }
 
-func (h *Handler) GetStats(w http.ResponseWriter, r *http.Request) {
-	stats := h.store.GetStats()
-	if stats == nil {
-		http.Error(w, "stats not available", http.StatusServiceUnavailable)
+func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		http.Error(w, "query parameter 'q' required", http.StatusBadRequest)
 		return
+	}
+
+	client := h.getClientForRequest(r)
+	users, err := client.SearchUsers(query)
+	if err != nil {
+		log.Printf("search users error: %v", err)
+		if strings.Contains(err.Error(), "403") {
+			h.writeRateLimitError(w)
+			return
+		}
+		http.Error(w, "search failed", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"count": len(users),
+		"users": users,
+	})
+}
+
+func (h *Handler) GetUserStats(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	if username == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
+	}
+
+	client := h.getClientForRequest(r)
+	session := h.getSession(r)
+	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
+
+	cacheKey := username
+	if isOwnProfile {
+		cacheKey = username + ":auth"
+	}
+
+	stats := h.store.GetStats(cacheKey)
+	if stats == nil {
+		var err error
+		stats, err = client.GetStats(username)
+		if err != nil {
+			log.Printf("get stats error for %s: %v", username, err)
+			if strings.Contains(err.Error(), "not found") {
+				http.Error(w, "user not found", http.StatusNotFound)
+				return
+			}
+			if strings.Contains(err.Error(), "403") {
+				h.writeRateLimitError(w)
+				return
+			}
+			http.Error(w, "failed to fetch stats", http.StatusInternalServerError)
+			return
+		}
+		h.store.SetStats(cacheKey, stats)
+
+		go func() {
+			commits, err := client.GetAllCommits(username, stats.Repositories)
+			if err != nil {
+				log.Printf("Warning: failed to fetch commits for %s: %v", username, err)
+				return
+			}
+			h.store.SetCommits(cacheKey, commits)
+			log.Printf("Fetched %d commits for %s", len(commits), username)
+		}()
 	}
 
 	lang := r.URL.Query().Get("language")
@@ -65,72 +138,16 @@ func filterStatsByLanguage(stats *github.Stats, lang string) *github.Stats {
 	return &filtered
 }
 
-func (h *Handler) Webhook(w http.ResponseWriter, r *http.Request) {
-	if h.webhookSecret != "" {
-		signature := r.Header.Get("X-Hub-Signature-256")
-		if signature == "" {
-			http.Error(w, "missing signature", http.StatusUnauthorized)
-			return
-		}
-
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "failed to read body", http.StatusBadRequest)
-			return
-		}
-
-		if !verifySignature(body, signature, h.webhookSecret) {
-			http.Error(w, "invalid signature", http.StatusUnauthorized)
-			return
-		}
+func (h *Handler) GetUserRepositories(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	if username == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
 	}
 
-	event := r.Header.Get("X-GitHub-Event")
-	log.Printf("Received webhook event: %s", event)
-
-	go func() {
-		if err := h.RefreshStats(); err != nil {
-			log.Printf("Failed to refresh stats: %v", err)
-		}
-	}()
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ok"))
-}
-
-func (h *Handler) RefreshStats() error {
-	log.Println("Refreshing GitHub stats...")
-
-	stats, err := h.gh.GetStats()
-	if err != nil {
-		return err
-	}
-
-	h.store.SetStats(stats)
-
-	commits, err := h.gh.GetAllCommits(stats.Repositories)
-	if err != nil {
-		log.Printf("Warning: failed to fetch commits: %v", err)
-	} else {
-		h.store.SetCommits(commits)
-		log.Printf("Fetched %d commits", len(commits))
-	}
-
-	log.Println("Stats refreshed successfully")
-	return nil
-}
-
-func verifySignature(payload []byte, signature, secret string) bool {
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(payload)
-	expected := "sha256=" + hex.EncodeToString(mac.Sum(nil))
-	return hmac.Equal([]byte(expected), []byte(signature))
-}
-
-func (h *Handler) GetRepositories(w http.ResponseWriter, r *http.Request) {
-	stats := h.store.GetStats()
+	stats := h.store.GetStats(username)
 	if stats == nil {
-		http.Error(w, "stats not available", http.StatusServiceUnavailable)
+		http.Error(w, "stats not available, fetch user stats first", http.StatusServiceUnavailable)
 		return
 	}
 
@@ -156,14 +173,16 @@ func (h *Handler) GetRepositories(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) GetRepoStats(w http.ResponseWriter, r *http.Request) {
-	repoName := r.URL.Query().Get("name")
-	if repoName == "" {
-		http.Error(w, "query parameter 'name' required", http.StatusBadRequest)
+func (h *Handler) GetUserRepoStats(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	repoName := chi.URLParam(r, "repo")
+
+	if username == "" || repoName == "" {
+		http.Error(w, "username and repo required", http.StatusBadRequest)
 		return
 	}
 
-	stats := h.store.GetStats()
+	stats := h.store.GetStats(username)
 	if stats == nil {
 		http.Error(w, "stats not available", http.StatusServiceUnavailable)
 		return
@@ -182,7 +201,7 @@ func (h *Handler) GetRepoStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	commits := h.store.GetCommits()
+	commits := h.store.GetCommits(username)
 	var repoCommits []github.Commit
 	for _, c := range commits {
 		if strings.EqualFold(c.Repo, repoName) {
@@ -221,13 +240,24 @@ func (h *Handler) GetRepoStats(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(repoStats)
 }
 
-func (h *Handler) GetFunStats(w http.ResponseWriter, r *http.Request) {
-	stats := h.store.GetStats()
-	commits := h.store.GetCommits()
+func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	if username == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
+	}
 
-	if stats == nil || commits == nil {
+	stats := h.store.GetStats(username)
+	commits := h.store.GetCommits(username)
+
+	if stats == nil {
 		http.Error(w, "stats not available", http.StatusServiceUnavailable)
 		return
+	}
+
+	// If commits haven't loaded yet, return partial stats
+	if commits == nil {
+		commits = []github.Commit{}
 	}
 
 	commitsByHour := make(map[int]int)
@@ -236,7 +266,6 @@ func (h *Handler) GetFunStats(w http.ResponseWriter, r *http.Request) {
 	commitsByRepo := make(map[string]int)
 
 	var weekendCommits, nightCommits, earlyCommits int
-	var firstCommit, lastCommit time.Time
 	uniqueDays := make(map[string]bool)
 
 	for _, c := range commits {
@@ -256,13 +285,6 @@ func (h *Handler) GetFunStats(w http.ResponseWriter, r *http.Request) {
 
 		if c.Date.Weekday() == time.Saturday || c.Date.Weekday() == time.Sunday {
 			weekendCommits++
-		}
-
-		if firstCommit.IsZero() || c.Date.Before(firstCommit) {
-			firstCommit = c.Date
-		}
-		if lastCommit.IsZero() || c.Date.After(lastCommit) {
-			lastCommit = c.Date
 		}
 	}
 
@@ -330,6 +352,58 @@ func (h *Handler) GetFunStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(funStats)
+}
+
+func (h *Handler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	if username == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
+	}
+
+	client := h.getClientForRequest(r)
+	followers, err := client.GetFollowers(username)
+	if err != nil {
+		log.Printf("get followers error: %v", err)
+		if strings.Contains(err.Error(), "403") {
+			h.writeRateLimitError(w)
+			return
+		}
+		http.Error(w, "failed to fetch followers", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"count":     len(followers),
+		"followers": followers,
+	})
+}
+
+func (h *Handler) GetUserFollowing(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	if username == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
+	}
+
+	client := h.getClientForRequest(r)
+	following, err := client.GetFollowing(username)
+	if err != nil {
+		log.Printf("get following error: %v", err)
+		if strings.Contains(err.Error(), "403") {
+			h.writeRateLimitError(w)
+			return
+		}
+		http.Error(w, "failed to fetch following", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"count":     len(following),
+		"following": following,
+	})
 }
 
 func calculateLongestStreak(commits []github.Commit) int {

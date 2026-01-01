@@ -1,26 +1,16 @@
 # gh-stats
 
-Personal GitHub stats dashboard.
-
-## Features
-
-- Profile, contributions graph, streak stats
-- Top repositories with language filtering
-- Commit search
+GitHub stats dashboard. [ghstats.fun](https://ghstats.fun)
 
 ## Run
 
 ```bash
-# Get token: https://github.com/settings/tokens (read:user scope)
-export GITHUB_TOKEN=xxx
-
-# Development
 docker compose --profile dev up --build
-
-# Production
-export DOMAIN=example.com
-docker compose --profile prod up -d
 ```
 
-Frontend: http://localhost:3000
-Backend: http://localhost:8080
+For login functionality, create OAuth App at https://github.com/settings/developers and add to `.env`:
+
+```bash
+GITHUB_CLIENT_ID=xxx
+GITHUB_CLIENT_SECRET=xxx
+```

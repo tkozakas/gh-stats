@@ -6,21 +6,25 @@ import (
 	"time"
 )
 
-func (c *Client) GetProfile() (*Profile, error) {
+func (c *Client) GetProfile(username string) (*Profile, error) {
 	var profile Profile
-	if err := c.request("/users/"+c.username, &profile); err != nil {
+	endpoint := "/users/" + username
+	if username == "" {
+		endpoint = "/user"
+	}
+	if err := c.request(endpoint, &profile); err != nil {
 		return nil, err
 	}
 	return &profile, nil
 }
 
-func (c *Client) GetRepositories() ([]Repository, error) {
+func (c *Client) GetRepositories(username string) ([]Repository, error) {
 	var allRepos []Repository
 	page := 1
 
 	for {
 		var repos []Repository
-		endpoint := fmt.Sprintf("/users/%s/repos?sort=updated&per_page=100&page=%d", c.username, page)
+		endpoint := fmt.Sprintf("/users/%s/repos?sort=updated&per_page=100&page=%d", username, page)
 		if err := c.request(endpoint, &repos); err != nil {
 			return allRepos, err
 		}
@@ -44,7 +48,7 @@ func (c *Client) GetRepositories() ([]Repository, error) {
 	return allRepos, nil
 }
 
-func (c *Client) GetContributions() ([]ContributionWeek, int, error) {
+func (c *Client) GetContributions(username string) ([]ContributionWeek, int, error) {
 	query := fmt.Sprintf(`{
 		user(login: "%s") {
 			contributionsCollection {
@@ -60,7 +64,7 @@ func (c *Client) GetContributions() ([]ContributionWeek, int, error) {
 				}
 			}
 		}
-	}`, c.username)
+	}`, username)
 
 	var result struct {
 		Data struct {
@@ -117,12 +121,12 @@ func levelToNumber(level string) int {
 	return 0
 }
 
-func (c *Client) GetCommits(repo, branch string) ([]Commit, error) {
+func (c *Client) GetCommits(username, repo, branch string) ([]Commit, error) {
 	var allCommits []Commit
 	page := 1
 
 	for {
-		endpoint := fmt.Sprintf("/repos/%s/%s/commits?per_page=100&page=%d", c.username, repo, page)
+		endpoint := fmt.Sprintf("/repos/%s/%s/commits?per_page=100&page=%d", username, repo, page)
 		if branch != "" {
 			endpoint += "&sha=" + branch
 		}
@@ -170,11 +174,11 @@ func (c *Client) GetCommits(repo, branch string) ([]Commit, error) {
 	return allCommits, nil
 }
 
-func (c *Client) GetAllCommits(repos []Repository) ([]Commit, error) {
+func (c *Client) GetAllCommits(username string, repos []Repository) ([]Commit, error) {
 	var allCommits []Commit
 
 	for _, repo := range repos {
-		commits, err := c.GetCommits(repo.Name, "")
+		commits, err := c.GetCommits(username, repo.Name, "")
 		if err != nil {
 			continue
 		}
@@ -188,23 +192,23 @@ func (c *Client) GetAllCommits(repos []Repository) ([]Commit, error) {
 	return allCommits, nil
 }
 
-func (c *Client) GetStats() (*Stats, error) {
-	profile, err := c.GetProfile()
+func (c *Client) GetStats(username string) (*Stats, error) {
+	profile, err := c.GetProfile(username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile: %w", err)
 	}
 
-	repos, err := c.GetRepositories()
+	repos, err := c.GetRepositories(username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get repositories: %w", err)
 	}
 
-	contributions, total, err := c.GetContributions()
+	contributions, total, err := c.GetContributions(username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contributions: %w", err)
 	}
 
-	languages := c.CalculateLanguages(repos)
+	languages := c.CalculateLanguages(username, repos)
 	streak := calculateStreak(contributions, total)
 
 	return &Stats{
@@ -217,7 +221,7 @@ func (c *Client) GetStats() (*Stats, error) {
 	}, nil
 }
 
-func (c *Client) GetLanguagesWithColors() (map[string]string, error) {
+func (c *Client) GetLanguagesWithColors(username string) (map[string]string, error) {
 	query := fmt.Sprintf(`{
 		user(login: "%s") {
 			repositories(first: 100, ownerAffiliations: OWNER) {
@@ -234,7 +238,7 @@ func (c *Client) GetLanguagesWithColors() (map[string]string, error) {
 				}
 			}
 		}
-	}`, c.username)
+	}`, username)
 
 	var result struct {
 		Data struct {
@@ -272,7 +276,7 @@ func (c *Client) GetLanguagesWithColors() (map[string]string, error) {
 	return colors, nil
 }
 
-func (c *Client) CalculateLanguages(repos []Repository) []LanguageStats {
+func (c *Client) CalculateLanguages(username string, repos []Repository) []LanguageStats {
 	langCount := make(map[string]int)
 	total := 0
 
@@ -287,7 +291,7 @@ func (c *Client) CalculateLanguages(repos []Repository) []LanguageStats {
 		return nil
 	}
 
-	colors, err := c.GetLanguagesWithColors()
+	colors, err := c.GetLanguagesWithColors(username)
 	if err != nil {
 		colors = make(map[string]string)
 	}
@@ -310,6 +314,35 @@ func (c *Client) CalculateLanguages(repos []Repository) []LanguageStats {
 	})
 
 	return stats
+}
+
+func (c *Client) SearchUsers(query string) ([]Profile, error) {
+	var result struct {
+		Items []Profile `json:"items"`
+	}
+	endpoint := fmt.Sprintf("/search/users?q=%s&per_page=20", query)
+	if err := c.request(endpoint, &result); err != nil {
+		return nil, err
+	}
+	return result.Items, nil
+}
+
+func (c *Client) GetFollowers(username string) ([]Profile, error) {
+	var followers []Profile
+	endpoint := fmt.Sprintf("/users/%s/followers?per_page=100", username)
+	if err := c.request(endpoint, &followers); err != nil {
+		return nil, err
+	}
+	return followers, nil
+}
+
+func (c *Client) GetFollowing(username string) ([]Profile, error) {
+	var following []Profile
+	endpoint := fmt.Sprintf("/users/%s/following?per_page=100", username)
+	if err := c.request(endpoint, &following); err != nil {
+		return nil, err
+	}
+	return following, nil
 }
 
 func calculateStreak(contributions []ContributionWeek, total int) StreakStats {

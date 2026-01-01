@@ -2,9 +2,11 @@ x-backend: &backend
   expose:
     - "8080"
   environment:
-    - GITHUB_TOKEN=${GITHUB_TOKEN}
-    - GITHUB_USERNAME=${GITHUB_USERNAME:-tkozakas}
-    - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+    - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+    - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+    - GITHUB_REDIRECT_URL=${GITHUB_REDIRECT_URL:-https://ghstats.fun/api/auth/callback}
+    - FRONTEND_URL=${FRONTEND_URL:-https://ghstats.fun}
+    - CORS_ORIGINS=${CORS_ORIGINS:-https://ghstats.fun}
     - PORT=8080
   restart: unless-stopped
   healthcheck:
@@ -16,7 +18,7 @@ x-backend: &backend
 
 x-frontend: &frontend
   expose:
-    - "80"
+    - "3000"
   restart: unless-stopped
 
 services:
@@ -28,6 +30,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    environment:
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GITHUB_REDIRECT_URL=${GITHUB_REDIRECT_URL:-http://localhost:8080/api/auth/callback}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - PORT=8080
 
   backend-prod:
     <<: *backend
@@ -40,7 +49,7 @@ services:
     <<: *frontend
     profiles: ["dev"]
     ports:
-      - "3000:80"
+      - "3000:3000"
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -93,7 +102,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
     environment:
-      - DOMAIN=${DOMAIN:-localhost}
+      - DOMAIN=${DOMAIN:-ghstats.fun}
     depends_on:
       - frontend-prod
       - backend-prod
