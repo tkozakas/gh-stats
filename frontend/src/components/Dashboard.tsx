@@ -35,11 +35,19 @@ export function Dashboard({ username }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
-  const [visibility, setVisibility] = useState<Visibility>("all");
+  const [visibility, setVisibility] = useState<Visibility>("public");
   const { auth, login, logout } = useAuth();
   const router = useRouter();
 
   const isOwnProfile = auth.authenticated && auth.username?.toLowerCase() === username.toLowerCase();
+
+  useEffect(() => {
+    if (isOwnProfile) {
+      setVisibility("all");
+    } else {
+      setVisibility("public");
+    }
+  }, [isOwnProfile]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -47,7 +55,7 @@ export function Dashboard({ username }: DashboardProps) {
       const data = await getUserStats(
         username,
         selectedLanguage ?? undefined,
-        isOwnProfile ? visibility : undefined
+        isOwnProfile ? visibility : "public"
       );
       setStats(data);
       setError(null);
@@ -280,10 +288,10 @@ function LoginBanner({ login }: { login: () => void }) {
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm text-neutral-200">
-            Want to see private contributions?
+            Is this your profile?
           </p>
           <p className="text-xs text-neutral-500">
-            Login with GitHub to view your complete stats including private repos
+            Login to see your private repositories and contributions
           </p>
         </div>
         <button
