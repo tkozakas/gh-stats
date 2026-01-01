@@ -2,6 +2,8 @@
 
 GitHub stats dashboard. [ghstats.fun](https://ghstats.fun)
 
+![Preview](demo.png)
+
 ## Setup
 
 Create `.env` with GitHub OAuth credentials from https://github.com/settings/developers:
