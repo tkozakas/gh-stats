@@ -9,6 +9,10 @@ import (
 	"gh-stats/backend/internal/github"
 )
 
+const (
+	StatsCacheTTL = 10 * time.Minute
+)
+
 type UserData struct {
 	Stats     *github.Stats
 	Commits   []github.Commit
@@ -33,7 +37,7 @@ func New() *Store {
 }
 
 func (s *Store) cleanupExpired() {
-	ticker := time.NewTicker(15 * time.Minute)
+	ticker := time.NewTicker(5 * time.Minute)
 	for range ticker.C {
 		s.mu.Lock()
 		now := time.Now()
@@ -45,6 +49,11 @@ func (s *Store) cleanupExpired() {
 		for state, created := range s.states {
 			if now.Sub(created) > 10*time.Minute {
 				delete(s.states, state)
+			}
+		}
+		for key, data := range s.users {
+			if now.Sub(data.UpdatedAt) > StatsCacheTTL {
+				delete(s.users, key)
 			}
 		}
 		s.mu.Unlock()
@@ -61,7 +70,9 @@ func (s *Store) GetStats(username string) *github.Stats {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if data, ok := s.users[username]; ok {
-		return data.Stats
+		if time.Since(data.UpdatedAt) <= StatsCacheTTL {
+			return data.Stats
+		}
 	}
 	return nil
 }
@@ -80,7 +91,9 @@ func (s *Store) GetCommits(username string) []github.Commit {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if data, ok := s.users[username]; ok {
-		return data.Commits
+		if time.Since(data.UpdatedAt) <= StatsCacheTTL {
+			return data.Commits
+		}
 	}
 	return nil
 }
@@ -89,7 +102,7 @@ func (s *Store) SetCommits(username string, commits []github.Commit) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.users[username] == nil {
-		s.users[username] = &UserData{}
+		s.users[username] = &UserData{UpdatedAt: time.Now()}
 	}
 	s.users[username].Commits = commits
 }
