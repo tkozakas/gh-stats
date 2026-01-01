@@ -5,6 +5,8 @@ import type {
   FunStats,
   UserSearchResult,
   AuthStatus,
+  CountryRanking,
+  UserRankingResult,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -19,11 +21,17 @@ export async function searchUsers(query: string): Promise<UserSearchResult> {
   return res.json();
 }
 
-export async function getUserStats(username: string, language?: string): Promise<GitHubStats> {
-  let endpoint = `${API_URL}/api/users/${username}/stats`;
-  if (language) {
-    endpoint += `?language=${encodeURIComponent(language)}`;
-  }
+export async function getUserStats(
+  username: string,
+  language?: string,
+  visibility?: "public" | "private" | "all"
+): Promise<GitHubStats> {
+  const params = new URLSearchParams();
+  if (language) params.set("language", language);
+  if (visibility) params.set("visibility", visibility);
+
+  const query = params.toString();
+  const endpoint = `${API_URL}/api/users/${username}/stats${query ? `?${query}` : ""}`;
 
   const res = await fetch(endpoint, {
     credentials: "include",
@@ -121,4 +129,34 @@ export async function logout(): Promise<void> {
 
 export function getLoginUrl(): string {
   return `${API_URL}/api/auth/login`;
+}
+
+export async function getCountryRanking(country: string): Promise<CountryRanking> {
+  const res = await fetch(`${API_URL}/api/rankings/country/${encodeURIComponent(country)}`, {
+    credentials: "include",
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new Error("Country not found");
+    }
+    throw new Error(`Failed to fetch country ranking: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function getUserRanking(username: string, country?: string): Promise<UserRankingResult> {
+  let endpoint = `${API_URL}/api/rankings/user/${encodeURIComponent(username)}`;
+  if (country) {
+    endpoint += `?country=${encodeURIComponent(country)}`;
+  }
+
+  const res = await fetch(endpoint, {
+    credentials: "include",
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch user ranking: ${res.statusText}`);
+  }
+  return res.json();
 }

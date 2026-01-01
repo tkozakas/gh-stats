@@ -111,3 +111,34 @@ export interface AuthStatus {
   username?: string;
   avatar_url?: string;
 }
+
+export interface CountryUser {
+  login: string;
+  name: string;
+  avatarUrl: string;
+  location: string;
+  followers: number;
+  publicContributions: number;
+  privateContributions: number;
+}
+
+export interface CountryRanking {
+  country: string;
+  users: CountryUser[];
+  updatedAt: string;
+}
+
+export interface UserRanking {
+  username: string;
+  country: string;
+  countryRank: number;
+  countryTotal: number;
+  publicContributions: number;
+  privateContributions: number;
+  followers: number;
+}
+
+export interface UserRankingResult {
+  found: boolean;
+  ranking?: UserRanking;
+}

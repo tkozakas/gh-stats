@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import type { GitHubStats } from "@/lib/types";
-import { getUserStats } from "@/lib/api";
+import type { GitHubStats, UserRanking } from "@/lib/types";
+import { getUserStats, getUserRanking } from "@/lib/api";
 import { useAuth } from "@/lib/context/AuthContext";
 import { Profile } from "./Profile";
 import { StreakStats } from "./StreakStats";
@@ -18,18 +18,28 @@ interface DashboardProps {
   username: string;
 }
 
+type Visibility = "public" | "private" | "all";
+
 export function Dashboard({ username }: DashboardProps) {
   const [stats, setStats] = useState<GitHubStats | null>(null);
+  const [ranking, setRanking] = useState<UserRanking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [visibility, setVisibility] = useState<Visibility>("all");
   const { auth, login, logout } = useAuth();
   const router = useRouter();
+
+  const isOwnProfile = auth.authenticated && auth.username?.toLowerCase() === username.toLowerCase();
 
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getUserStats(username, selectedLanguage ?? undefined);
+      const data = await getUserStats(
+        username,
+        selectedLanguage ?? undefined,
+        isOwnProfile ? visibility : undefined
+      );
       setStats(data);
       setError(null);
     } catch (err) {
@@ -37,11 +47,21 @@ export function Dashboard({ username }: DashboardProps) {
     } finally {
       setLoading(false);
     }
-  }, [username, selectedLanguage]);
+  }, [username, selectedLanguage, visibility, isOwnProfile]);
 
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  useEffect(() => {
+    getUserRanking(username)
+      .then((result) => {
+        if (result.found && result.ranking) {
+          setRanking(result.ranking);
+        }
+      })
+      .catch(() => {});
+  }, [username]);
 
   if (loading && !stats) {
     return (
@@ -82,8 +102,6 @@ export function Dashboard({ username }: DashboardProps) {
 
   if (!stats) return null;
 
-  const isOwnProfile = auth.authenticated && auth.username?.toLowerCase() === username.toLowerCase();
-
   return (
     <main className="min-h-screen bg-neutral-950">
       <div className="mx-auto max-w-6xl px-6 py-16">
@@ -94,9 +112,11 @@ export function Dashboard({ username }: DashboardProps) {
           onBack={() => router.push("/")}
           onProfile={() => auth.username && router.push(`/${auth.username}`)}
           isOwnProfile={isOwnProfile}
+          visibility={visibility}
+          onVisibilityChange={isOwnProfile ? setVisibility : undefined}
         />
 
-        <Profile profile={stats.profile} />
+        <Profile profile={stats.profile} ranking={ranking} />
 
         {!auth.authenticated && (
           <LoginBanner login={login} />
@@ -138,8 +158,8 @@ export function Dashboard({ username }: DashboardProps) {
                 )}
                 {isOwnProfile && (
                   <div className="flex justify-between">
-                    <span className="text-neutral-400">View mode</span>
-                    <span className="text-emerald-400">Private</span>
+                    <span className="text-neutral-400">Visibility</span>
+                    <span className="text-emerald-400 capitalize">{visibility}</span>
                   </div>
                 )}
               </div>
@@ -172,9 +192,11 @@ interface HeaderProps {
   onBack: () => void;
   onProfile: () => void;
   isOwnProfile?: boolean;
+  visibility?: Visibility;
+  onVisibilityChange?: (v: Visibility) => void;
 }
 
-function Header({ auth, login, logout, onBack, onProfile, isOwnProfile }: HeaderProps) {
+function Header({ auth, login, logout, onBack, onProfile, isOwnProfile, visibility, onVisibilityChange }: HeaderProps) {
   return (
     <div className="mb-8 flex items-center justify-between">
       <button
@@ -184,10 +206,22 @@ function Header({ auth, login, logout, onBack, onProfile, isOwnProfile }: Header
         ← Back to search
       </button>
       <div className="flex items-center gap-4">
-        {isOwnProfile && (
-          <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs text-emerald-400">
-            Your Profile
-          </span>
+        {isOwnProfile && onVisibilityChange && (
+          <div className="flex items-center gap-1 rounded-lg bg-neutral-800/50 p-1">
+            {(["all", "public", "private"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => onVisibilityChange(v)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                  visibility === v
+                    ? "bg-neutral-700 text-neutral-100"
+                    : "text-neutral-400 hover:text-neutral-200"
+                }`}
+              >
+                {v === "all" ? "All" : v === "public" ? "Public" : "Private"}
+              </button>
+            ))}
+          </div>
         )}
         {auth.authenticated ? (
           <>

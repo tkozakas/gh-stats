@@ -124,3 +124,32 @@ type OAuthTokenResponse struct {
 	TokenType   string `json:"token_type"`
 	Scope       string `json:"scope"`
 }
+
+// CountryUser represents a user entry from the top-github-users cache
+type CountryUser struct {
+	Login                string `json:"login"`
+	Name                 string `json:"name"`
+	AvatarURL            string `json:"avatarUrl"`
+	Location             string `json:"location"`
+	Followers            int    `json:"followers"`
+	PublicContributions  int    `json:"publicContributions"`
+	PrivateContributions int    `json:"privateContributions"`
+}
+
+// CountryRanking holds all users for a specific country
+type CountryRanking struct {
+	Country   string        `json:"country"`
+	Users     []CountryUser `json:"users"`
+	UpdatedAt time.Time     `json:"updatedAt"`
+}
+
+// UserRanking represents a user's ranking within their country and globally
+type UserRanking struct {
+	Username             string `json:"username"`
+	Country              string `json:"country"`
+	CountryRank          int    `json:"countryRank"`
+	CountryTotal         int    `json:"countryTotal"`
+	PublicContributions  int    `json:"publicContributions"`
+	PrivateContributions int    `json:"privateContributions"`
+	Followers            int    `json:"followers"`
+}

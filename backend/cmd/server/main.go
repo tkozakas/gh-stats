@@ -62,6 +62,9 @@ func main() {
 	r.Get("/api/users/{username}/followers", handler.GetUserFollowers)
 	r.Get("/api/users/{username}/following", handler.GetUserFollowing)
 
+	r.Get("/api/rankings/country/{country}", handler.GetCountryRanking)
+	r.Get("/api/rankings/user/{username}", handler.GetUserRanking)
+
 	r.Get("/health", handler.Health)
 
 	port := os.Getenv("PORT")

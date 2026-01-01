@@ -18,6 +18,7 @@ type Handler struct {
 	store       *cache.Store
 	oauth       *github.OAuthConfig
 	frontendURL string
+	ranking     *github.RankingService
 }
 
 func NewHandler(store *cache.Store, oauth *github.OAuthConfig, frontendURL string) *Handler {
@@ -25,6 +26,7 @@ func NewHandler(store *cache.Store, oauth *github.OAuthConfig, frontendURL strin
 		store:       store,
 		oauth:       oauth,
 		frontendURL: frontendURL,
+		ranking:     github.NewRankingService(),
 	}
 }
 
@@ -492,4 +494,68 @@ func calculateLongestStreak(commits []github.Commit) int {
 	}
 
 	return longest
+}
+
+func (h *Handler) GetCountryRanking(w http.ResponseWriter, r *http.Request) {
+	country := chi.URLParam(r, "country")
+	if country == "" {
+		http.Error(w, "country required", http.StatusBadRequest)
+		return
+	}
+
+	ranking, err := h.ranking.GetCountryRanking(country)
+	if err != nil {
+		log.Printf("get country ranking error: %v", err)
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "country not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "failed to fetch ranking", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ranking)
+}
+
+func (h *Handler) GetUserRanking(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	if username == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
+	}
+
+	country := r.URL.Query().Get("country")
+	var ranking *github.UserRanking
+	var err error
+
+	if country != "" {
+		ranking, err = h.ranking.GetUserRanking(username, country)
+	} else {
+		ranking, err = h.ranking.FindUserRanking(username)
+	}
+
+	if err != nil {
+		log.Printf("get user ranking error: %v", err)
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "country not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "failed to fetch ranking", http.StatusInternalServerError)
+		return
+	}
+
+	if ranking == nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"found": false,
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"found":   true,
+		"ranking": ranking,
+	})
 }

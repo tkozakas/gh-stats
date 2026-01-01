@@ -1,11 +1,20 @@
 import Image from "next/image";
-import type { GitHubProfile } from "@/lib/types";
+import Link from "next/link";
+import type { GitHubProfile, UserRanking } from "@/lib/types";
 
 interface ProfileProps {
   profile: GitHubProfile;
+  ranking?: UserRanking | null;
 }
 
-export function Profile({ profile }: ProfileProps) {
+function formatCountryName(country: string): string {
+  return country
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+export function Profile({ profile, ranking }: ProfileProps) {
   return (
     <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
       <Image
@@ -16,9 +25,21 @@ export function Profile({ profile }: ProfileProps) {
         className="rounded-full border-2 border-neutral-800"
       />
       <div className="text-center sm:text-left">
-        <h1 className="text-3xl font-bold text-neutral-100">
-          {profile.name || profile.login}
-        </h1>
+        <div className="flex items-center gap-3 justify-center sm:justify-start">
+          <h1 className="text-3xl font-bold text-neutral-100">
+            {profile.name || profile.login}
+          </h1>
+          {ranking && (
+            <Link
+              href={`/country/${ranking.country}`}
+              className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 px-3 py-1 text-sm font-medium text-amber-400 hover:from-amber-500/30 hover:to-orange-500/30 transition-colors"
+            >
+              <span className="text-amber-300">#{ranking.countryRank}</span>
+              <span className="text-neutral-400">in</span>
+              <span>{formatCountryName(ranking.country)}</span>
+            </Link>
+          )}
+        </div>
         <p className="text-lg text-neutral-400">@{profile.login}</p>
         {profile.bio && (
           <p className="mt-2 max-w-md text-neutral-300">{profile.bio}</p>
@@ -68,6 +89,14 @@ export function Profile({ profile }: ProfileProps) {
             </div>
             <div className="text-xs text-neutral-500">repos</div>
           </div>
+          {ranking && (
+            <div className="text-center">
+              <div className="text-2xl font-bold text-amber-400">
+                {ranking.publicContributions.toLocaleString()}
+              </div>
+              <div className="text-xs text-neutral-500">contributions</div>
+            </div>
+          )}
         </div>
       </div>
     </div>
