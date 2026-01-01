@@ -81,7 +81,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	frontendURL := h.frontendURL
 	if frontendURL == "" {
-		frontendURL = "http://localhost:3000"
+		frontendURL = "https://ghstats.fun"
 	}
 	http.Redirect(w, r, frontendURL+"/"+profile.Login, http.StatusTemporaryRedirect)
 }
