@@ -8,11 +8,24 @@ import (
 	"time"
 )
 
-const (
-	_defaultTimeout = 30 * time.Second
-	_githubAPIURL   = "https://api.github.com"
-	_githubGraphQL  = "https://api.github.com/graphql"
+const _defaultTimeout = 30 * time.Second
+
+var (
+	apiURL     = "https://api.github.com"
+	graphqlURL = "https://api.github.com/graphql"
 )
+
+func SetAPIURL(url string) string {
+	old := apiURL
+	apiURL = url
+	return old
+}
+
+func SetGraphQLURL(url string) string {
+	old := graphqlURL
+	graphqlURL = url
+	return old
+}
 
 type Client struct {
 	token string
@@ -41,7 +54,7 @@ func (c *Client) WithToken(token string) *Client {
 }
 
 func (c *Client) request(endpoint string, result any) error {
-	req, err := http.NewRequest("GET", _githubAPIURL+endpoint, nil)
+	req, err := http.NewRequest("GET", apiURL+endpoint, nil)
 	if err != nil {
 		return err
 	}
@@ -84,7 +97,7 @@ func (c *Client) graphqlWithVars(query string, variables map[string]any, result 
 		return err
 	}
 
-	req, err := http.NewRequest("POST", _githubGraphQL, nil)
+	req, err := http.NewRequest("POST", graphqlURL, nil)
 	if err != nil {
 		return err
 	}

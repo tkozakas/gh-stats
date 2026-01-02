@@ -235,7 +235,9 @@ func (c *Client) GetStatsWithVisibility(username string, visibility string) (*St
 
 	contributions, total, err := c.GetContributions(username)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get contributions: %w", err)
+		// GraphQL requires auth - gracefully degrade for unauthenticated requests
+		contributions = []ContributionWeek{}
+		total = 0
 	}
 	if contributions == nil {
 		contributions = []ContributionWeek{}
@@ -327,8 +329,8 @@ func (c *Client) CalculateLanguages(username string, repos []Repository) []Langu
 		return nil
 	}
 
-	colors, err := c.GetLanguagesWithColors(username)
-	if err != nil {
+	colors, _ := c.GetLanguagesWithColors(username)
+	if colors == nil {
 		colors = make(map[string]string)
 	}
 
