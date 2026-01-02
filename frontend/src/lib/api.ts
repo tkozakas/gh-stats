@@ -7,6 +7,7 @@ import type {
   AuthStatus,
   CountryRanking,
   UserRankingResult,
+  ContributionWeek,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -95,6 +96,46 @@ export async function getUserFunStats(
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch fun stats: ${res.statusText}`);
+  }
+
+  return res.json();
+}
+
+export async function getUserContributions(
+  username: string,
+  year?: number
+): Promise<{ contributions: ContributionWeek[]; totalContributions: number; year: number }> {
+  const params = new URLSearchParams();
+  if (year) params.set("year", year.toString());
+
+  const query = params.toString();
+  const endpoint = `${API_URL}/api/users/${username}/contributions${query ? `?${query}` : ""}`;
+
+  const res = await fetch(endpoint, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch contributions: ${res.statusText}`);
+  }
+
+  return res.json();
+}
+
+export async function getUserRepoCommits(
+  username: string,
+  visibility?: Visibility
+): Promise<{ commitsByRepo: Record<string, number>; totalCommits: number }> {
+  const params = new URLSearchParams();
+  if (visibility) params.set("visibility", visibility);
+
+  const query = params.toString();
+  const endpoint = `${API_URL}/api/users/${username}/repo-commits${query ? `?${query}` : ""}`;
+
+  const res = await fetch(endpoint, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch repo commits: ${res.statusText}`);
   }
 
   return res.json();

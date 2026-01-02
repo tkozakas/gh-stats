@@ -6,12 +6,12 @@ GitHub analytics dashboard. [ghstats.fun](https://ghstats.fun)
 
 ## Setup
 
-Create `.env` with GitHub OAuth credentials from https://github.com/settings/developers:
+Create `.env` with GitHub credentials:
 
 ```bash
-GITHUB_CLIENT_ID=xxx
+GITHUB_TOKEN=xxx              # Personal access token from https://github.com/settings/tokens
+GITHUB_CLIENT_ID=xxx          # OAuth app from https://github.com/settings/developers
 GITHUB_CLIENT_SECRET=xxx
-TUNNEL_TOKEN=xxx # prod only
 ```
 
 ## Run

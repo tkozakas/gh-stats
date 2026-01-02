@@ -81,6 +81,8 @@ export interface FunStats {
   commitsByHour: Record<number, number>;
   commitsByDayOfWeek: Record<string, number>;
   commitsByMonth: Record<string, number>;
+  avgCommitsByHour: Record<number, number>;
+  avgCommitsByDayOfWeek: Record<string, number>;
   averageCommitsPerDay: number;
   longestCodingStreak: number;
   totalCommits: number;

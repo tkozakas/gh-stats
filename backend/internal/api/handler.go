@@ -460,6 +460,22 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 		avgCommitsPerDay = float64(len(filteredCommits)) / float64(totalDays)
 	}
 
+	avgCommitsByHour := make(map[int]float64)
+	for hour, count := range commitsByHour {
+		if totalDays > 0 {
+			avgCommitsByHour[hour] = float64(count) / float64(totalDays)
+		}
+	}
+
+	numWeeks := float64(totalDays) / 7.0
+	if numWeeks < 1 {
+		numWeeks = 1
+	}
+	avgCommitsByDayOfWeek := make(map[string]float64)
+	for day, count := range commitsByDayOfWeek {
+		avgCommitsByDayOfWeek[day] = float64(count) / numWeeks
+	}
+
 	total := float64(len(filteredCommits))
 	weekendPercent := 0.0
 	nightPercent := 0.0
@@ -478,6 +494,8 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 		CommitsByHour:         commitsByHour,
 		CommitsByDayOfWeek:    commitsByDayOfWeek,
 		CommitsByMonth:        commitsByMonth,
+		AvgCommitsByHour:      avgCommitsByHour,
+		AvgCommitsByDayOfWeek: avgCommitsByDayOfWeek,
 		AverageCommitsPerDay:  avgCommitsPerDay,
 		LongestCodingStreak:   longestStreak,
 		TotalCommits:          len(filteredCommits),
@@ -512,6 +530,90 @@ func filterCommitsByDate(commits []github.Commit, year, month, day int) []github
 		filtered = append(filtered, c)
 	}
 	return filtered
+}
+
+func (h *Handler) GetUserContributions(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	if username == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
+	}
+
+	yearStr := r.URL.Query().Get("year")
+	year := 0
+	if yearStr != "" {
+		if y, err := strconv.Atoi(yearStr); err == nil && y >= 2008 && y <= 2100 {
+			year = y
+		} else {
+			http.Error(w, "invalid year parameter", http.StatusBadRequest)
+			return
+		}
+	}
+
+	client := h.getClientForUser(r, username)
+	contributions, total, err := client.GetContributionsForYear(username, year)
+	if err != nil {
+		log.Printf("get contributions error for %s: %v", username, err)
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "user not found", http.StatusNotFound)
+			return
+		}
+		if strings.Contains(err.Error(), "403") {
+			h.writeRateLimitError(w)
+			return
+		}
+		http.Error(w, "failed to fetch contributions", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"contributions":      contributions,
+		"totalContributions": total,
+		"year":               year,
+	})
+}
+
+func (h *Handler) GetUserRepoCommits(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	if username == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
+	}
+
+	visibility := r.URL.Query().Get("visibility")
+	if visibility == "" {
+		visibility = "public"
+	}
+
+	session := h.getSession(r)
+	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
+
+	cacheKey := username + ":" + visibility
+	if isOwnProfile {
+		cacheKey = username + ":auth:" + visibility
+	}
+
+	commits := h.store.GetCommits(cacheKey)
+	if commits == nil {
+		// Try public cache if authenticated cache is empty
+		if isOwnProfile {
+			commits = h.store.GetCommits(username + ":public")
+		}
+	}
+
+	commitsByRepo := make(map[string]int)
+	if commits != nil {
+		for _, c := range commits {
+			commitsByRepo[c.Repo]++
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"commitsByRepo": commitsByRepo,
+		"totalCommits":  len(commits),
+	})
 }
 
 func (h *Handler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {

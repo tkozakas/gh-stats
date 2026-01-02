@@ -1,10 +1,24 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import type { Repository } from "@/lib/types";
+import { getUserRepoCommits, type Visibility } from "@/lib/api";
 
 interface TopReposProps {
   repositories: Repository[];
+  username: string;
+  visibility?: Visibility;
 }
 
-export function TopRepos({ repositories }: TopReposProps) {
+export function TopRepos({ repositories, username, visibility = "public" }: TopReposProps) {
+  const [commitsByRepo, setCommitsByRepo] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    getUserRepoCommits(username, visibility)
+      .then((data) => setCommitsByRepo(data.commitsByRepo))
+      .catch(() => {});
+  }, [username, visibility]);
+
   if (!repositories?.length) return null;
 
   return (
@@ -43,6 +57,11 @@ export function TopRepos({ repositories }: TopReposProps) {
               <span className="flex items-center gap-1">
                 <span></span> {repo.forks_count}
               </span>
+              {commitsByRepo[repo.name] > 0 && (
+                <span className="flex items-center gap-1 text-emerald-500">
+                  <span>●</span> {commitsByRepo[repo.name]} commits
+                </span>
+              )}
             </div>
           </a>
         ))}

@@ -292,7 +292,11 @@ export function Dashboard({ username }: DashboardProps) {
               ) : (
                 <div className="relative">
                   {loading && <RefetchingOverlay />}
-                  <ContributionGraph contributions={stats.contributions} />
+                  <ContributionGraph 
+                    contributions={stats.contributions} 
+                    username={username}
+                    totalContributions={stats.streak.totalContributions}
+                  />
                 </div>
               )}
 
@@ -365,7 +369,11 @@ export function Dashboard({ username }: DashboardProps) {
               ) : (
                 <div className="relative">
                   {loading && <RefetchingOverlay />}
-                  <TopRepos repositories={stats.repositories} />
+                  <TopRepos 
+                    repositories={stats.repositories} 
+                    username={username}
+                    visibility={isOwnProfile ? visibility : "public"}
+                  />
                 </div>
               )}
 

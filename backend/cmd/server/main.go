@@ -66,6 +66,8 @@ func main() {
 	r.Get("/api/users/{username}/repositories", handler.GetUserRepositories)
 	r.Get("/api/users/{username}/repos/{repo}", handler.GetUserRepoStats)
 	r.Get("/api/users/{username}/fun", handler.GetUserFunStats)
+	r.Get("/api/users/{username}/contributions", handler.GetUserContributions)
+	r.Get("/api/users/{username}/repo-commits", handler.GetUserRepoCommits)
 	r.Get("/api/users/{username}/followers", handler.GetUserFollowers)
 	r.Get("/api/users/{username}/following", handler.GetUserFollowing)
 

@@ -81,20 +81,22 @@ type RepoStats struct {
 }
 
 type FunStats struct {
-	MostProductiveHour    int            `json:"mostProductiveHour"`
-	MostProductiveDay     string         `json:"mostProductiveDay"`
-	CommitsByHour         map[int]int    `json:"commitsByHour"`
-	CommitsByDayOfWeek    map[string]int `json:"commitsByDayOfWeek"`
-	CommitsByMonth        map[string]int `json:"commitsByMonth"`
-	AverageCommitsPerDay  float64        `json:"averageCommitsPerDay"`
-	LongestCodingStreak   int            `json:"longestCodingStreak"`
-	TotalCommits          int            `json:"totalCommits"`
-	TotalRepositories     int            `json:"totalRepositories"`
-	MostActiveRepo        string         `json:"mostActiveRepo"`
-	MostActiveRepoCommits int            `json:"mostActiveRepoCommits"`
-	WeekendWarriorPercent float64        `json:"weekendWarriorPercent"`
-	NightOwlPercent       float64        `json:"nightOwlPercent"`
-	EarlyBirdPercent      float64        `json:"earlyBirdPercent"`
+	MostProductiveHour    int                `json:"mostProductiveHour"`
+	MostProductiveDay     string             `json:"mostProductiveDay"`
+	CommitsByHour         map[int]int        `json:"commitsByHour"`
+	CommitsByDayOfWeek    map[string]int     `json:"commitsByDayOfWeek"`
+	CommitsByMonth        map[string]int     `json:"commitsByMonth"`
+	AvgCommitsByHour      map[int]float64    `json:"avgCommitsByHour"`
+	AvgCommitsByDayOfWeek map[string]float64 `json:"avgCommitsByDayOfWeek"`
+	AverageCommitsPerDay  float64            `json:"averageCommitsPerDay"`
+	LongestCodingStreak   int                `json:"longestCodingStreak"`
+	TotalCommits          int                `json:"totalCommits"`
+	TotalRepositories     int                `json:"totalRepositories"`
+	MostActiveRepo        string             `json:"mostActiveRepo"`
+	MostActiveRepoCommits int                `json:"mostActiveRepoCommits"`
+	WeekendWarriorPercent float64            `json:"weekendWarriorPercent"`
+	NightOwlPercent       float64            `json:"nightOwlPercent"`
+	EarlyBirdPercent      float64            `json:"earlyBirdPercent"`
 }
 
 type UserSearchResult struct {
