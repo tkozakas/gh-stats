@@ -13,10 +13,32 @@ import (
 
 const (
 	rankingBaseURL      = "https://raw.githubusercontent.com/gayanvoice/top-github-users/main/cache"
-	countriesListURL    = "https://api.github.com/repos/gayanvoice/top-github-users/contents/cache"
 	rankingTTL          = 6 * time.Hour
+	countriesListURL    = "https://api.github.com/repos/gayanvoice/top-github-users/contents/cache"
 	countriesRefreshTTL = 24 * time.Hour
 )
+
+var defaultCountries = []string{
+	"afghanistan", "albania", "algeria", "andorra", "angola", "argentina", "armenia",
+	"australia", "austria", "azerbaijan", "bahrain", "bangladesh", "belarus", "belgium",
+	"benin", "bhutan", "bolivia", "bosnia_and_herzegovina", "botswana", "brazil", "bulgaria",
+	"burkina_faso", "burundi", "cambodia", "cameroon", "canada", "chad", "chile", "china",
+	"colombia", "congo", "croatia", "cuba", "cyprus", "czechia", "denmark", "dominican_republic",
+	"ecuador", "egypt", "el_salvador", "estonia", "ethiopia", "finland", "france", "georgia",
+	"germany", "ghana", "greece", "guatemala", "honduras", "hong_kong", "hungary", "iceland",
+	"india", "indonesia", "iran", "iraq", "ireland", "israel", "italy", "jamaica", "japan",
+	"jordan", "kazakhstan", "kenya", "kuwait", "laos", "latvia", "lebanon", "lithuania",
+	"luxembourg", "madagascar", "malawi", "malaysia", "maldives", "mali", "malta", "mauritania",
+	"mauritius", "mexico", "moldova", "mongolia", "montenegro", "morocco", "mozambique_",
+	"myanmar", "namibia", "nepal", "netherlands", "new_zealand", "nicaragua", "nigeria",
+	"norway", "oman", "pakistan", "palestine", "panama", "paraguay", "peru", "philippines",
+	"poland", "portugal", "qatar", "romania", "russia", "rwanda", "san_marino", "saudi_arabia",
+	"senegal", "serbia", "sierra_leone", "singapore", "slovakia", "slovenia", "south_africa",
+	"south_korea", "spain", "sri_lanka", "sudan", "sweden", "switzerland", "syria", "taiwan",
+	"tanzania", "thailand", "tunisia", "turkey", "uganda", "ukraine", "united_arab_emirates",
+	"united_kingdom", "united_states", "uruguay", "uzbekistan", "venezuela", "vietnam",
+	"yemen", "zambia", "zimbabwe",
+}
 
 type GlobalUser struct {
 	Login               string `json:"login"`
@@ -32,15 +54,21 @@ type RankingService struct {
 	availableCountries []string
 	countriesUpdatedAt time.Time
 	httpGet            func(url string) (*http.Response, error)
+	token              string
 }
 
 func NewRankingService() *RankingService {
+	return NewRankingServiceWithToken("")
+}
+
+func NewRankingServiceWithToken(token string) *RankingService {
 	rs := &RankingService{
 		cache:              make(map[string]*CountryRanking),
 		globalIndex:        []GlobalUser{},
 		globalMap:          make(map[string]int),
 		availableCountries: []string{},
 		httpGet:            http.Get,
+		token:              token,
 	}
 	go rs.refreshCountriesList()
 	return rs
@@ -193,11 +221,9 @@ func (r *RankingService) GetAvailableCountries() []string {
 		return result
 	}
 
-	countries := make([]string, 0, len(r.cache))
-	for country := range r.cache {
-		countries = append(countries, country)
-	}
-	return countries
+	result := make([]string, len(defaultCountries))
+	copy(result, defaultCountries)
+	return result
 }
 
 func (r *RankingService) GetGlobalRanking(limit int) []GlobalUser {
@@ -214,7 +240,18 @@ func (r *RankingService) GetGlobalRanking(limit int) []GlobalUser {
 }
 
 func (r *RankingService) refreshCountriesList() {
-	resp, err := r.httpGet(countriesListURL)
+	req, err := http.NewRequest("GET", countriesListURL, nil)
+	if err != nil {
+		log.Printf("Failed to create request for countries list: %v", err)
+		return
+	}
+
+	if r.token != "" {
+		req.Header.Set("Authorization", "token "+r.token)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Failed to fetch countries list: %v", err)
 		return

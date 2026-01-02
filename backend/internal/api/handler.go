@@ -42,7 +42,7 @@ func NewHandler(store *cache.Store, oauth *github.OAuthConfig, frontendURL strin
 		store:            store,
 		oauth:            oauth,
 		frontendURL:      frontendURL,
-		ranking:          github.NewRankingService(),
+		ranking:          github.NewRankingServiceWithToken(githubToken),
 		publicClient:     publicClient,
 		publicTokenOwner: publicTokenOwner,
 	}

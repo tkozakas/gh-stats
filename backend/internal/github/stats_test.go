@@ -2,6 +2,7 @@ package github
 
 import (
 	"testing"
+	"time"
 )
 
 func TestLevelToNumber_ValidLevels(t *testing.T) {
@@ -73,8 +74,94 @@ func TestCalculateStreak_ConsecutiveDays(t *testing.T) {
 	}
 	streak := calculateStreak(contributions, 7)
 
-	if streak.LongestStreak < 3 {
-		t.Errorf("expected longest streak >= 3, got %d", streak.LongestStreak)
+	if streak.LongestStreak != 3 {
+		t.Errorf("expected longest streak 3, got %d", streak.LongestStreak)
+	}
+}
+
+func TestCalculateStreak_CurrentStreakFromToday(t *testing.T) {
+	today := time.Now().Format("2006-01-02")
+	yesterday := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
+	twoDaysAgo := time.Now().AddDate(0, 0, -2).Format("2006-01-02")
+
+	contributions := []ContributionWeek{
+		{Days: []ContributionDay{
+			{Date: twoDaysAgo, Count: 1, Level: 1},
+			{Date: yesterday, Count: 2, Level: 1},
+			{Date: today, Count: 3, Level: 2},
+		}},
+	}
+	streak := calculateStreak(contributions, 6)
+
+	if streak.CurrentStreak != 3 {
+		t.Errorf("expected current streak 3, got %d", streak.CurrentStreak)
+	}
+}
+
+func TestCalculateStreak_CurrentStreakFromYesterday(t *testing.T) {
+	yesterday := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
+	twoDaysAgo := time.Now().AddDate(0, 0, -2).Format("2006-01-02")
+	threeDaysAgo := time.Now().AddDate(0, 0, -3).Format("2006-01-02")
+
+	contributions := []ContributionWeek{
+		{Days: []ContributionDay{
+			{Date: threeDaysAgo, Count: 1, Level: 1},
+			{Date: twoDaysAgo, Count: 2, Level: 1},
+			{Date: yesterday, Count: 3, Level: 2},
+		}},
+	}
+	streak := calculateStreak(contributions, 6)
+
+	// Current streak should still count if yesterday had contributions
+	if streak.CurrentStreak != 3 {
+		t.Errorf("expected current streak 3 (from yesterday), got %d", streak.CurrentStreak)
+	}
+}
+
+func TestCalculateStreak_NoCurrentStreakWhenGap(t *testing.T) {
+	threeDaysAgo := time.Now().AddDate(0, 0, -3).Format("2006-01-02")
+	fourDaysAgo := time.Now().AddDate(0, 0, -4).Format("2006-01-02")
+	fiveDaysAgo := time.Now().AddDate(0, 0, -5).Format("2006-01-02")
+
+	contributions := []ContributionWeek{
+		{Days: []ContributionDay{
+			{Date: fiveDaysAgo, Count: 1, Level: 1},
+			{Date: fourDaysAgo, Count: 2, Level: 1},
+			{Date: threeDaysAgo, Count: 3, Level: 2},
+		}},
+	}
+	streak := calculateStreak(contributions, 6)
+
+	// No contributions today or yesterday, so current streak should be 0
+	if streak.CurrentStreak != 0 {
+		t.Errorf("expected current streak 0 (gap of 2+ days), got %d", streak.CurrentStreak)
+	}
+	if streak.LongestStreak != 3 {
+		t.Errorf("expected longest streak 3, got %d", streak.LongestStreak)
+	}
+}
+
+func TestCalculateStreak_LongestStreakInPast(t *testing.T) {
+	today := time.Now().Format("2006-01-02")
+
+	contributions := []ContributionWeek{
+		{Days: []ContributionDay{
+			{Date: "2024-06-01", Count: 1, Level: 1},
+			{Date: "2024-06-02", Count: 1, Level: 1},
+			{Date: "2024-06-03", Count: 1, Level: 1},
+			{Date: "2024-06-04", Count: 1, Level: 1},
+			{Date: "2024-06-05", Count: 1, Level: 1},
+			{Date: "2024-06-06", Count: 0, Level: 0},
+			{Date: today, Count: 1, Level: 1},
+		}},
+	}
+	streak := calculateStreak(contributions, 6)
+
+	if streak.CurrentStreak != 1 {
+		t.Errorf("expected current streak 1, got %d", streak.CurrentStreak)
+	}
+	if streak.LongestStreak != 5 {
+		t.Errorf("expected longest streak 5, got %d", streak.LongestStreak)
 	}
 }
 

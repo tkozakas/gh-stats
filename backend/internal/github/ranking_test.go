@@ -206,12 +206,21 @@ func TestRankingService_GetUserRanking(t *testing.T) {
 func TestRankingService_GetAvailableCountries(t *testing.T) {
 	service := NewRankingService()
 
-	service.cache["lithuania"] = &CountryRanking{Country: "lithuania"}
-	service.cache["germany"] = &CountryRanking{Country: "germany"}
+	service.availableCountries = []string{"lithuania", "germany"}
 
 	countries := service.GetAvailableCountries()
 
 	if len(countries) != 2 {
 		t.Errorf("expected 2 countries, got %d", len(countries))
+	}
+}
+
+func TestRankingService_GetAvailableCountries_FallbackToDefault(t *testing.T) {
+	service := NewRankingService()
+
+	countries := service.GetAvailableCountries()
+
+	if len(countries) != len(defaultCountries) {
+		t.Errorf("expected %d default countries, got %d", len(defaultCountries), len(countries))
 	}
 }
