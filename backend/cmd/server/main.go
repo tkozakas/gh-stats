@@ -70,6 +70,7 @@ func main() {
 	r.Get("/api/users/{username}/repo-commits", handler.GetUserRepoCommits)
 	r.Get("/api/users/{username}/followers", handler.GetUserFollowers)
 	r.Get("/api/users/{username}/following", handler.GetUserFollowing)
+	r.Get("/api/users/{username}/code-frequency", handler.GetUserCodeFrequency)
 
 	r.Get("/api/rankings/countries", handler.GetAvailableCountries)
 	r.Get("/api/rankings/global", handler.GetGlobalRanking)

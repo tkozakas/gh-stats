@@ -158,3 +158,17 @@ type UserRanking struct {
 	PrivateContributions int    `json:"privateContributions"`
 	Followers            int    `json:"followers"`
 }
+
+// CodeFrequencyWeek represents weekly code frequency data (additions/deletions)
+type CodeFrequencyWeek struct {
+	Week      int64 `json:"week"`      // Unix timestamp of week start
+	Additions int   `json:"additions"` // Lines added
+	Deletions int   `json:"deletions"` // Lines deleted (positive number)
+}
+
+// CodeFrequency represents aggregated code frequency across all repos
+type CodeFrequency struct {
+	Weeks          []CodeFrequencyWeek `json:"weeks"`
+	TotalAdditions int                 `json:"totalAdditions"`
+	TotalDeletions int                 `json:"totalDeletions"`
+}

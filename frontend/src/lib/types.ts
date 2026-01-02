@@ -158,3 +158,15 @@ export interface GlobalRanking {
   users: GlobalUser[];
   total: number;
 }
+
+export interface CodeFrequencyWeek {
+  week: number;
+  additions: number;
+  deletions: number;
+}
+
+export interface CodeFrequency {
+  weeks: CodeFrequencyWeek[];
+  totalAdditions: number;
+  totalDeletions: number;
+}

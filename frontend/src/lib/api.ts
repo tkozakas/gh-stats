@@ -9,6 +9,7 @@ import type {
   UserRankingResult,
   ContributionWeek,
   GlobalRanking,
+  CodeFrequency,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -242,6 +243,25 @@ export async function getGlobalRanking(limit?: number): Promise<GlobalRanking> {
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch global ranking: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function getUserCodeFrequency(
+  username: string,
+  visibility?: Visibility
+): Promise<CodeFrequency> {
+  const params = new URLSearchParams();
+  if (visibility) params.set("visibility", visibility);
+
+  const query = params.toString();
+  const endpoint = `${API_URL}/api/users/${username}/code-frequency${query ? `?${query}` : ""}`;
+
+  const res = await fetch(endpoint, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch code frequency: ${res.statusText}`);
   }
   return res.json();
 }

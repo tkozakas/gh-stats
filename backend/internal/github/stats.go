@@ -495,6 +495,87 @@ func (c *Client) GetFollowing(username string) ([]Profile, error) {
 	return following, nil
 }
 
+func (c *Client) GetCodeFrequency(username string, repos []Repository) (*CodeFrequency, error) {
+	if len(repos) == 0 {
+		return &CodeFrequency{Weeks: []CodeFrequencyWeek{}}, nil
+	}
+
+	const maxWorkers = 10
+	numWorkers := min(maxWorkers, len(repos))
+
+	type result struct {
+		data [][]int64
+		err  error
+	}
+
+	repoChan := make(chan Repository, len(repos))
+	resultChan := make(chan result, len(repos))
+
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for repo := range repoChan {
+				var data [][]int64
+				endpoint := fmt.Sprintf("/repos/%s/%s/stats/code_frequency", username, repo.Name)
+				err := c.request(endpoint, &data)
+				resultChan <- result{data: data, err: err}
+			}
+		}()
+	}
+
+	for _, repo := range repos {
+		repoChan <- repo
+	}
+	close(repoChan)
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	weeklyData := make(map[int64]*CodeFrequencyWeek)
+	totalAdditions := 0
+	totalDeletions := 0
+
+	for res := range resultChan {
+		if res.err != nil || res.data == nil {
+			continue
+		}
+		for _, week := range res.data {
+			if len(week) < 3 {
+				continue
+			}
+			timestamp := week[0]
+			additions := int(week[1])
+			deletions := int(-week[2])
+
+			if _, exists := weeklyData[timestamp]; !exists {
+				weeklyData[timestamp] = &CodeFrequencyWeek{Week: timestamp}
+			}
+			weeklyData[timestamp].Additions += additions
+			weeklyData[timestamp].Deletions += deletions
+			totalAdditions += additions
+			totalDeletions += deletions
+		}
+	}
+
+	weeks := make([]CodeFrequencyWeek, 0, len(weeklyData))
+	for _, w := range weeklyData {
+		weeks = append(weeks, *w)
+	}
+	sort.Slice(weeks, func(i, j int) bool {
+		return weeks[i].Week < weeks[j].Week
+	})
+
+	return &CodeFrequency{
+		Weeks:          weeks,
+		TotalAdditions: totalAdditions,
+		TotalDeletions: totalDeletions,
+	}, nil
+}
+
 func calculateStreak(contributions []ContributionWeek, total int) StreakStats {
 	var allDays []ContributionDay
 	for _, w := range contributions {

@@ -104,6 +104,7 @@ services:
     depends_on:
       - frontend-prod
       - backend-prod
+      - webhook
     restart: unless-stopped
 
 volumes:

@@ -805,3 +805,60 @@ func (h *Handler) GetUserRanking(w http.ResponseWriter, r *http.Request) {
 		"ranking": ranking,
 	})
 }
+
+func (h *Handler) GetUserCodeFrequency(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	if username == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
+	}
+
+	visibility := r.URL.Query().Get("visibility")
+	if visibility == "" {
+		visibility = "public"
+	}
+
+	client := h.getClientForUser(r, username)
+	session := h.getSession(r)
+	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
+
+	if (visibility == "private" || visibility == "all") && !isOwnProfile {
+		http.Error(w, "private visibility only available for your own profile", http.StatusForbidden)
+		return
+	}
+
+	cacheKey := username + ":" + visibility
+	if isOwnProfile {
+		cacheKey = username + ":auth:" + visibility
+	}
+
+	stats := h.store.GetStats(cacheKey)
+	if stats == nil {
+		var err error
+		stats, err = client.GetStatsWithVisibility(username, visibility)
+		if err != nil {
+			log.Printf("get stats error for %s: %v", username, err)
+			if strings.Contains(err.Error(), "not found") {
+				http.Error(w, "user not found", http.StatusNotFound)
+				return
+			}
+			if strings.Contains(err.Error(), "403") {
+				h.writeRateLimitError(w)
+				return
+			}
+			http.Error(w, "failed to fetch stats", http.StatusInternalServerError)
+			return
+		}
+		h.store.SetStats(cacheKey, stats)
+	}
+
+	codeFreq, err := client.GetCodeFrequency(username, stats.Repositories)
+	if err != nil {
+		log.Printf("get code frequency error for %s: %v", username, err)
+		http.Error(w, "failed to fetch code frequency", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(codeFreq)
+}

@@ -9,3 +9,4 @@ export { FunStats } from "./FunStats";
 export { RepositoryList, RepositoryListSkeleton } from "./RepositoryList";
 export { RepoDetail } from "./RepoDetail";
 export { UserListModal } from "./UserListModal";
+export { CodeFrequency } from "./CodeFrequency";

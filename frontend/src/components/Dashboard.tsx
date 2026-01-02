@@ -14,6 +14,7 @@ import { TopRepos } from "./TopRepos";
 import { FunStats } from "./FunStats";
 import { RepositoryList, RepositoryListSkeleton } from "./RepositoryList";
 import { UserListModal } from "./UserListModal";
+import { CodeFrequency } from "./CodeFrequency";
 
 interface DashboardProps {
   username: string;
@@ -300,6 +301,8 @@ export function Dashboard({ username }: DashboardProps) {
                   />
                 </div>
               )}
+
+              <CodeFrequency username={username} visibility={isOwnProfile ? visibility : "public"} />
 
               <div className="grid gap-8 lg:grid-cols-2">
                 {!stats ? (
