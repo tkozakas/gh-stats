@@ -69,7 +69,9 @@ services:
 
   webhook:
     profiles: ["prod"]
-    image: almir/webhook:latest
+    build:
+      context: ./deploy
+      dockerfile: Dockerfile.webhook
     volumes:
       - ./deploy/hooks.json:/etc/webhook/hooks.json:ro
       - ./deploy/deploy.sh:/scripts/deploy.sh:ro
