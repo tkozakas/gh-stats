@@ -44,8 +44,6 @@ services:
     <<: *backend
     profiles: ["prod"]
     image: ghcr.io/tkozakas/gh-stats-backend:main
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
 
   frontend:
     <<: *frontend
@@ -65,25 +63,21 @@ services:
     <<: *frontend
     profiles: ["prod"]
     image: ghcr.io/tkozakas/gh-stats-frontend:main
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
     depends_on:
       backend-prod:
         condition: service_healthy
 
-  watchtower:
+  webhook:
     profiles: ["prod"]
-    image: containrrr/watchtower:1.7.1
+    image: almir/webhook:latest
     volumes:
+      - ./deploy/hooks.json:/etc/webhook/hooks.json:ro
+      - ./deploy/deploy.sh:/scripts/deploy.sh:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - .:/app:ro
     environment:
-      - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=300
-      - WATCHTOWER_LABEL_ENABLE=true
-      - WATCHTOWER_HTTP_API_UPDATE=true
-      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_TOKEN}
-      - REPO_USER=${GITHUB_USERNAME}
-      - REPO_PASS=${GITHUB_TOKEN}
+      - DEPLOY_TOKEN=${DEPLOY_TOKEN}
+    command: ["-verbose", "-hooks=/etc/webhook/hooks.json", "-hotreload"]
     restart: unless-stopped
 
   tunnel:

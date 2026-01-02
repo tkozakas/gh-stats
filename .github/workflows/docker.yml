@@ -128,10 +128,10 @@ jobs:
     needs: [manifest-backend, manifest-frontend]
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Watchtower
+      - name: Trigger Webhook
         env:
-          WATCHTOWER_TOKEN: ${{ secrets.WATCHTOWER_TOKEN }}
-        if: env.WATCHTOWER_TOKEN != ''
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        if: env.DEPLOY_TOKEN != ''
         run: |
-          curl -sf -H "Authorization: Bearer ${{ secrets.WATCHTOWER_TOKEN }}" \
-            https://ghstats.fun/watchtower/v1/update
+          curl -sf -H "Authorization: ${{ secrets.DEPLOY_TOKEN }}" \
+            https://ghstats.fun/hooks/deploy
