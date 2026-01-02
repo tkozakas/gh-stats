@@ -3,6 +3,7 @@ package github
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -11,8 +12,10 @@ import (
 )
 
 const (
-	rankingBaseURL = "https://raw.githubusercontent.com/gayanvoice/top-github-users/main/cache"
-	rankingTTL     = 6 * time.Hour
+	rankingBaseURL      = "https://raw.githubusercontent.com/gayanvoice/top-github-users/main/cache"
+	countriesListURL    = "https://api.github.com/repos/gayanvoice/top-github-users/contents/cache"
+	rankingTTL          = 6 * time.Hour
+	countriesRefreshTTL = 24 * time.Hour
 )
 
 type GlobalUser struct {
@@ -22,20 +25,25 @@ type GlobalUser struct {
 }
 
 type RankingService struct {
-	mu          sync.RWMutex
-	cache       map[string]*CountryRanking
-	globalIndex []GlobalUser
-	globalMap   map[string]int
-	httpGet     func(url string) (*http.Response, error)
+	mu                 sync.RWMutex
+	cache              map[string]*CountryRanking
+	globalIndex        []GlobalUser
+	globalMap          map[string]int
+	availableCountries []string
+	countriesUpdatedAt time.Time
+	httpGet            func(url string) (*http.Response, error)
 }
 
 func NewRankingService() *RankingService {
-	return &RankingService{
-		cache:       make(map[string]*CountryRanking),
-		globalIndex: []GlobalUser{},
-		globalMap:   make(map[string]int),
-		httpGet:     http.Get,
+	rs := &RankingService{
+		cache:              make(map[string]*CountryRanking),
+		globalIndex:        []GlobalUser{},
+		globalMap:          make(map[string]int),
+		availableCountries: []string{},
+		httpGet:            http.Get,
 	}
+	go rs.refreshCountriesList()
+	return rs
 }
 
 func (r *RankingService) GetCountryRanking(country string) (*CountryRanking, error) {
@@ -175,9 +183,69 @@ func (r *RankingService) GetAvailableCountries() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
+	if time.Since(r.countriesUpdatedAt) > countriesRefreshTTL {
+		go r.refreshCountriesList()
+	}
+
+	if len(r.availableCountries) > 0 {
+		result := make([]string, len(r.availableCountries))
+		copy(result, r.availableCountries)
+		return result
+	}
+
 	countries := make([]string, 0, len(r.cache))
 	for country := range r.cache {
 		countries = append(countries, country)
 	}
 	return countries
+}
+
+func (r *RankingService) GetGlobalRanking(limit int) []GlobalUser {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if limit <= 0 || limit > len(r.globalIndex) {
+		limit = len(r.globalIndex)
+	}
+
+	result := make([]GlobalUser, limit)
+	copy(result, r.globalIndex[:limit])
+	return result
+}
+
+func (r *RankingService) refreshCountriesList() {
+	resp, err := r.httpGet(countriesListURL)
+	if err != nil {
+		log.Printf("Failed to fetch countries list: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Failed to fetch countries list: status %d", resp.StatusCode)
+		return
+	}
+
+	var contents []struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&contents); err != nil {
+		log.Printf("Failed to decode countries list: %v", err)
+		return
+	}
+
+	countries := make([]string, 0, len(contents))
+	for _, c := range contents {
+		if strings.HasSuffix(c.Name, ".json") {
+			countries = append(countries, strings.TrimSuffix(c.Name, ".json"))
+		}
+	}
+	sort.Strings(countries)
+
+	r.mu.Lock()
+	r.availableCountries = countries
+	r.countriesUpdatedAt = time.Now()
+	r.mu.Unlock()
+
+	log.Printf("Refreshed countries list: %d countries available", len(countries))
 }

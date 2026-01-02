@@ -146,3 +146,14 @@ export interface UserRankingResult {
   found: boolean;
   ranking?: UserRanking;
 }
+
+export interface GlobalUser {
+  login: string;
+  country: string;
+  publicContributions: number;
+}
+
+export interface GlobalRanking {
+  users: GlobalUser[];
+  total: number;
+}

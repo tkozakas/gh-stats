@@ -8,6 +8,7 @@ import type {
   CountryRanking,
   UserRankingResult,
   ContributionWeek,
+  GlobalRanking,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -224,6 +225,23 @@ export async function getUserRanking(username: string, country?: string): Promis
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch user ranking: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function getGlobalRanking(limit?: number): Promise<GlobalRanking> {
+  const params = new URLSearchParams();
+  if (limit) params.set("limit", limit.toString());
+
+  const query = params.toString();
+  const endpoint = `${API_URL}/api/rankings/global${query ? `?${query}` : ""}`;
+
+  const res = await fetch(endpoint, {
+    credentials: "include",
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch global ranking: ${res.statusText}`);
   }
   return res.json();
 }

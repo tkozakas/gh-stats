@@ -736,6 +736,24 @@ func (h *Handler) GetCountryRanking(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ranking)
 }
 
+func (h *Handler) GetGlobalRanking(w http.ResponseWriter, r *http.Request) {
+	limitStr := r.URL.Query().Get("limit")
+	limit := 100
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 1000 {
+			limit = l
+		}
+	}
+
+	users := h.ranking.GetGlobalRanking(limit)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"users": users,
+		"total": len(users),
+	})
+}
+
 func (h *Handler) GetUserRanking(w http.ResponseWriter, r *http.Request) {
 	username := chi.URLParam(r, "username")
 	if username == "" {

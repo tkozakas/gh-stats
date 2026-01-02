@@ -72,6 +72,7 @@ func main() {
 	r.Get("/api/users/{username}/following", handler.GetUserFollowing)
 
 	r.Get("/api/rankings/countries", handler.GetAvailableCountries)
+	r.Get("/api/rankings/global", handler.GetGlobalRanking)
 	r.Get("/api/rankings/country/{country}", handler.GetCountryRanking)
 	r.Get("/api/rankings/user/{username}", handler.GetUserRanking)
 
