@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -72,9 +73,18 @@ func (c *Client) GetRepositoriesWithVisibility(username string, visibility strin
 }
 
 func (c *Client) GetContributions(username string) ([]ContributionWeek, int, error) {
+	return c.GetContributionsForYear(username, 0)
+}
+
+func (c *Client) GetContributionsForYear(username string, year int) ([]ContributionWeek, int, error) {
+	var dateRange string
+	if year > 0 {
+		dateRange = fmt.Sprintf(`from: "%d-01-01T00:00:00Z", to: "%d-12-31T23:59:59Z"`, year, year)
+	}
+
 	query := fmt.Sprintf(`{
 		user(login: "%s") {
-			contributionsCollection {
+			contributionsCollection(%s) {
 				contributionCalendar {
 					totalContributions
 					weeks {
@@ -87,7 +97,7 @@ func (c *Client) GetContributions(username string) ([]ContributionWeek, int, err
 				}
 			}
 		}
-	}`, username)
+	}`, username, dateRange)
 
 	var result struct {
 		Data struct {
@@ -198,14 +208,63 @@ func (c *Client) GetCommits(username, repo, branch string) ([]Commit, error) {
 }
 
 func (c *Client) GetAllCommits(username string, repos []Repository) ([]Commit, error) {
-	var allCommits []Commit
+	return c.GetAllCommitsWithLimit(username, repos, 0)
+}
 
-	for _, repo := range repos {
-		commits, err := c.GetCommits(username, repo.Name, "")
-		if err != nil {
+func (c *Client) GetAllCommitsWithLimit(username string, repos []Repository, limit int) ([]Commit, error) {
+	if len(repos) == 0 {
+		return []Commit{}, nil
+	}
+
+	sortedRepos := make([]Repository, len(repos))
+	copy(sortedRepos, repos)
+	sort.Slice(sortedRepos, func(i, j int) bool {
+		return sortedRepos[i].Stars > sortedRepos[j].Stars
+	})
+
+	if limit > 0 && len(sortedRepos) > limit {
+		sortedRepos = sortedRepos[:limit]
+	}
+
+	const maxWorkers = 10
+	numWorkers := min(maxWorkers, len(sortedRepos))
+
+	type result struct {
+		commits []Commit
+		err     error
+	}
+
+	repoChan := make(chan Repository, len(sortedRepos))
+	resultChan := make(chan result, len(sortedRepos))
+
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for repo := range repoChan {
+				commits, err := c.GetCommits(username, repo.Name, "")
+				resultChan <- result{commits: commits, err: err}
+			}
+		}()
+	}
+
+	for _, repo := range sortedRepos {
+		repoChan <- repo
+	}
+	close(repoChan)
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	var allCommits []Commit
+	for res := range resultChan {
+		if res.err != nil {
 			continue
 		}
-		allCommits = append(allCommits, commits...)
+		allCommits = append(allCommits, res.commits...)
 	}
 
 	sort.Slice(allCommits, func(i, j int) bool {

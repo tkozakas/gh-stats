@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -138,7 +139,7 @@ func (h *Handler) GetUserStats(w http.ResponseWriter, r *http.Request) {
 		h.store.SetStats(cacheKey, stats)
 
 		go func() {
-			commits, err := client.GetAllCommits(username, stats.Repositories)
+			commits, err := client.GetAllCommitsWithLimit(username, stats.Repositories, 20)
 			if err != nil {
 				log.Printf("Warning: failed to fetch commits for %s: %v", username, err)
 				return
@@ -311,6 +312,36 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 		visibility = "public"
 	}
 
+	yearStr := r.URL.Query().Get("year")
+	monthStr := r.URL.Query().Get("month")
+	dayStr := r.URL.Query().Get("day")
+
+	var filterYear, filterMonth, filterDay int
+	if yearStr != "" {
+		if y, err := strconv.Atoi(yearStr); err == nil && y >= 1970 && y <= 2100 {
+			filterYear = y
+		} else {
+			http.Error(w, "invalid year parameter", http.StatusBadRequest)
+			return
+		}
+	}
+	if monthStr != "" {
+		if m, err := strconv.Atoi(monthStr); err == nil && m >= 1 && m <= 12 {
+			filterMonth = m
+		} else {
+			http.Error(w, "invalid month parameter (1-12)", http.StatusBadRequest)
+			return
+		}
+	}
+	if dayStr != "" {
+		if d, err := strconv.Atoi(dayStr); err == nil && d >= 1 && d <= 31 {
+			filterDay = d
+		} else {
+			http.Error(w, "invalid day parameter (1-31)", http.StatusBadRequest)
+			return
+		}
+	}
+
 	client := h.getClientForUser(r, username)
 	session := h.getSession(r)
 	isOwnProfile := session != nil && strings.EqualFold(session.Username, username)
@@ -352,7 +383,7 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 		}
 		h.store.SetStats(cacheKey, stats)
 
-		commits, err = client.GetAllCommits(username, stats.Repositories)
+		commits, err = client.GetAllCommitsWithLimit(username, stats.Repositories, 20)
 		if err != nil {
 			log.Printf("Warning: failed to fetch commits for %s: %v", username, err)
 			commits = []github.Commit{}
@@ -366,6 +397,8 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 		commits = []github.Commit{}
 	}
 
+	filteredCommits := filterCommitsByDate(commits, filterYear, filterMonth, filterDay)
+
 	commitsByHour := make(map[int]int)
 	commitsByDayOfWeek := make(map[string]int)
 	commitsByMonth := make(map[string]int)
@@ -374,7 +407,7 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 	var weekendCommits, nightCommits, earlyCommits int
 	uniqueDays := make(map[string]bool)
 
-	for _, c := range commits {
+	for _, c := range filteredCommits {
 		commitsByHour[c.Date.Hour()]++
 		commitsByDayOfWeek[c.Date.Weekday().String()]++
 		commitsByMonth[c.Date.Format("2006-01")]++
@@ -424,10 +457,10 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 	totalDays := len(uniqueDays)
 	avgCommitsPerDay := 0.0
 	if totalDays > 0 {
-		avgCommitsPerDay = float64(len(commits)) / float64(totalDays)
+		avgCommitsPerDay = float64(len(filteredCommits)) / float64(totalDays)
 	}
 
-	total := float64(len(commits))
+	total := float64(len(filteredCommits))
 	weekendPercent := 0.0
 	nightPercent := 0.0
 	earlyPercent := 0.0
@@ -437,7 +470,7 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 		earlyPercent = float64(earlyCommits) / total * 100
 	}
 
-	longestStreak := calculateLongestStreak(commits)
+	longestStreak := calculateLongestStreak(filteredCommits)
 
 	funStats := github.FunStats{
 		MostProductiveHour:    mostProductiveHour,
@@ -447,7 +480,7 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 		CommitsByMonth:        commitsByMonth,
 		AverageCommitsPerDay:  avgCommitsPerDay,
 		LongestCodingStreak:   longestStreak,
-		TotalCommits:          len(commits),
+		TotalCommits:          len(filteredCommits),
 		TotalRepositories:     len(stats.Repositories),
 		MostActiveRepo:        mostActiveRepo,
 		MostActiveRepoCommits: mostActiveRepoCommits,
@@ -458,6 +491,27 @@ func (h *Handler) GetUserFunStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(funStats)
+}
+
+func filterCommitsByDate(commits []github.Commit, year, month, day int) []github.Commit {
+	if year == 0 && month == 0 && day == 0 {
+		return commits
+	}
+
+	filtered := make([]github.Commit, 0, len(commits))
+	for _, c := range commits {
+		if year != 0 && c.Date.Year() != year {
+			continue
+		}
+		if month != 0 && int(c.Date.Month()) != month {
+			continue
+		}
+		if day != 0 && c.Date.Day() != day {
+			continue
+		}
+		filtered = append(filtered, c)
+	}
+	return filtered
 }
 
 func (h *Handler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
@@ -546,6 +600,16 @@ func calculateLongestStreak(commits []github.Commit) int {
 	}
 
 	return longest
+}
+
+func (h *Handler) GetAvailableCountries(w http.ResponseWriter, r *http.Request) {
+	countries := h.ranking.GetAvailableCountries()
+	sort.Strings(countries)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"countries": countries,
+	})
 }
 
 func (h *Handler) GetCountryRanking(w http.ResponseWriter, r *http.Request) {

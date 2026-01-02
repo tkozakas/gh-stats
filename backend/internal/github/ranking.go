@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -14,16 +15,26 @@ const (
 	rankingTTL     = 6 * time.Hour
 )
 
+type GlobalUser struct {
+	Login               string
+	Country             string
+	PublicContributions int
+}
+
 type RankingService struct {
-	mu      sync.RWMutex
-	cache   map[string]*CountryRanking
-	httpGet func(url string) (*http.Response, error)
+	mu          sync.RWMutex
+	cache       map[string]*CountryRanking
+	globalIndex []GlobalUser
+	globalMap   map[string]int
+	httpGet     func(url string) (*http.Response, error)
 }
 
 func NewRankingService() *RankingService {
 	return &RankingService{
-		cache:   make(map[string]*CountryRanking),
-		httpGet: http.Get,
+		cache:       make(map[string]*CountryRanking),
+		globalIndex: []GlobalUser{},
+		globalMap:   make(map[string]int),
+		httpGet:     http.Get,
 	}
 }
 
@@ -48,9 +59,33 @@ func (r *RankingService) GetCountryRanking(country string) (*CountryRanking, err
 
 	r.mu.Lock()
 	r.cache[normalizedCountry] = ranking
+	r.rebuildGlobalIndex()
 	r.mu.Unlock()
 
 	return ranking, nil
+}
+
+func (r *RankingService) rebuildGlobalIndex() {
+	var allUsers []GlobalUser
+	for country, ranking := range r.cache {
+		for _, user := range ranking.Users {
+			allUsers = append(allUsers, GlobalUser{
+				Login:               user.Login,
+				Country:             country,
+				PublicContributions: user.PublicContributions,
+			})
+		}
+	}
+
+	sort.Slice(allUsers, func(i, j int) bool {
+		return allUsers[i].PublicContributions > allUsers[j].PublicContributions
+	})
+
+	r.globalIndex = allUsers
+	r.globalMap = make(map[string]int, len(allUsers))
+	for i, user := range allUsers {
+		r.globalMap[strings.ToLower(user.Login)] = i
+	}
 }
 
 func (r *RankingService) fetchCountryRanking(country string) (*CountryRanking, error) {
@@ -107,11 +142,19 @@ func (r *RankingService) findUserInRanking(username string, ranking *CountryRank
 	lowerUsername := strings.ToLower(username)
 	for i, user := range ranking.Users {
 		if strings.ToLower(user.Login) == lowerUsername {
+			globalRank := 0
+			globalTotal := len(r.globalIndex)
+			if idx, ok := r.globalMap[lowerUsername]; ok {
+				globalRank = idx + 1
+			}
+
 			return &UserRanking{
 				Username:             user.Login,
 				Country:              ranking.Country,
 				CountryRank:          i + 1,
 				CountryTotal:         len(ranking.Users),
+				GlobalRank:           globalRank,
+				GlobalTotal:          globalTotal,
 				PublicContributions:  user.PublicContributions,
 				PrivateContributions: user.PrivateContributions,
 				Followers:            user.Followers,

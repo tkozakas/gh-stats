@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/context/AuthContext";
-import { searchUsers } from "@/lib/api";
+import { searchUsers, getAvailableCountries } from "@/lib/api";
 import type { UserSearchResult } from "@/lib/types";
 
 export default function Home() {
@@ -13,7 +13,16 @@ export default function Home() {
   const [results, setResults] = useState<UserSearchResult | null>(null);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [countries, setCountries] = useState<string[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    getAvailableCountries()
+      .then(setCountries)
+      .catch(() => {})
+      .finally(() => setCountriesLoading(false));
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,6 +184,37 @@ export default function Home() {
                 <button onClick={login} className="text-emerald-500 hover:text-emerald-400">Sign in</button> to see your private repositories
               </p>
             )}
+          </div>
+        )}
+
+        {countries.length > 0 && (
+          <div className="mt-16">
+            <div className="mb-6 flex items-center justify-center gap-2">
+              <svg className="h-5 w-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-lg font-semibold text-neutral-300">Browse by Country</h3>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              {countries.map((country) => (
+                <button
+                  key={country}
+                  onClick={() => router.push(`/country/${encodeURIComponent(country)}`)}
+                  className="rounded-full border border-neutral-800 bg-neutral-900/50 px-4 py-2 text-sm text-neutral-400 transition-all hover:border-neutral-700 hover:bg-neutral-800/50 hover:text-neutral-200"
+                >
+                  {country
+                    .split("_")
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                    .join(" ")}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {countriesLoading && (
+          <div className="mt-16 flex justify-center">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-neutral-700 border-t-neutral-400" />
           </div>
         )}
 

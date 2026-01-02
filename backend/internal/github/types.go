@@ -149,6 +149,8 @@ type UserRanking struct {
 	Country              string `json:"country"`
 	CountryRank          int    `json:"countryRank"`
 	CountryTotal         int    `json:"countryTotal"`
+	GlobalRank           int    `json:"globalRank"`
+	GlobalTotal          int    `json:"globalTotal"`
 	PublicContributions  int    `json:"publicContributions"`
 	PrivateContributions int    `json:"privateContributions"`
 	Followers            int    `json:"followers"`

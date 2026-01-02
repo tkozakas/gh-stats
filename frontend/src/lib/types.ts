@@ -133,6 +133,8 @@ export interface UserRanking {
   country: string;
   countryRank: number;
   countryTotal: number;
+  globalRank: number;
+  globalTotal: number;
   publicContributions: number;
   privateContributions: number;
   followers: number;

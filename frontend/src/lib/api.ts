@@ -145,6 +145,18 @@ export function getLoginUrl(): string {
   return `${API_URL}/api/auth/login`;
 }
 
+export async function getAvailableCountries(): Promise<string[]> {
+  const res = await fetch(`${API_URL}/api/rankings/countries`, {
+    credentials: "include",
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch countries: ${res.statusText}`);
+  }
+  const data = await res.json();
+  return data.countries;
+}
+
 export async function getCountryRanking(country: string): Promise<CountryRanking> {
   const res = await fetch(`${API_URL}/api/rankings/country/${encodeURIComponent(country)}`, {
     credentials: "include",

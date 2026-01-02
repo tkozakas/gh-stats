@@ -22,11 +22,20 @@ interface DashboardProps {
 type Visibility = "public" | "private" | "all";
 
 function extractCountryFromLocation(location: string): string | null {
-  const parts = location.split(",").map((p) => p.trim());
-  const lastPart = parts[parts.length - 1];
-  if (lastPart && lastPart.length > 1) {
-    return lastPart;
+  const segments = location.split("/").map((s) => s.trim());
+  
+  for (const segment of segments) {
+    const parts = segment.split(",").map((p) => p.trim());
+    if (parts.length >= 2) {
+      return parts[parts.length - 1];
+    }
   }
+  
+  const parts = location.split(",").map((p) => p.trim());
+  if (parts.length >= 2) {
+    return parts[parts.length - 1];
+  }
+  
   return parts[0] || null;
 }
 
