@@ -7,7 +7,8 @@ import Link from "next/link";
 import type { CountryRanking, GlobalRanking, GlobalUser, CountryUser } from "@/lib/types";
 import { getAvailableCountries, getCountryRanking, getGlobalRanking } from "@/lib/api";
 
-function formatCountryName(country: string): string {
+function formatCountryName(country: string | undefined): string {
+  if (!country) return "Unknown";
   return country
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

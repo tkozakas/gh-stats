@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -100,15 +101,23 @@ func TestRankingService_GetCountryRanking_CachesResult(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		callCount++
+		if r.URL.Path == "/cached_country.json" {
+			callCount++
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(mockUsers)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockUsers)
+		json.NewEncoder(w).Encode([]struct{}{})
 	}))
 	defer server.Close()
 
 	service := NewRankingService()
 	service.httpGet = func(url string) (*http.Response, error) {
-		return http.Get(server.URL + "/cached_country.json")
+		if strings.Contains(url, "cached_country") {
+			return http.Get(server.URL + "/cached_country.json")
+		}
+		return http.Get(server.URL + "/countries")
 	}
 
 	service.GetCountryRanking("cached_country")

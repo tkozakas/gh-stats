@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
-import { searchUsers, getAvailableCountries } from "@/lib/api";
-import type { UserSearchResult } from "@/lib/types";
+import { searchUsers, getAvailableCountries, getCountryRanking } from "@/lib/api";
+import type { UserSearchResult, CountryUser } from "@/lib/types";
 
 export default function Home() {
   const { auth, loading: authLoading, login, logout } = useAuth();
@@ -15,6 +16,11 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [countries, setCountries] = useState<string[]>([]);
   const [countriesLoading, setCountriesLoading] = useState(true);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [countryUsers, setCountryUsers] = useState<CountryUser[]>([]);
+  const [countryLoading, setCountryLoading] = useState(false);
+  const [countryError, setCountryError] = useState<string | null>(null);
+  const countryUsersRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -44,6 +50,36 @@ export default function Home() {
     router.push(`/${username}`);
   };
 
+  const handleCountryClick = async (country: string) => {
+    if (selectedCountry === country) {
+      setSelectedCountry(null);
+      setCountryUsers([]);
+      return;
+    }
+
+    setSelectedCountry(country);
+    setCountryLoading(true);
+    setCountryError(null);
+
+    try {
+      const data = await getCountryRanking(country);
+      setCountryUsers(data.users);
+      setTimeout(() => {
+        countryUsersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    } catch (err) {
+      setCountryError(err instanceof Error ? err.message : "Failed to load users");
+    } finally {
+      setCountryLoading(false);
+    }
+  };
+
+  const formatCountryName = (country: string) =>
+    country
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-neutral-950 via-neutral-950 to-neutral-900">
       <div className="mx-auto max-w-4xl px-6 py-12">
@@ -61,15 +97,6 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/rankings")}
-              className="flex items-center gap-2 rounded-full bg-neutral-800/80 px-4 py-2 text-sm text-neutral-200 ring-1 ring-neutral-700 transition-all hover:bg-neutral-700 hover:ring-neutral-600"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Rankings
-            </button>
             {authLoading ? (
               <div className="h-10 w-24 animate-pulse rounded-full bg-neutral-800" />
             ) : auth.authenticated ? (
@@ -208,16 +235,111 @@ export default function Home() {
               {countries.map((country) => (
                 <button
                   key={country}
-                  onClick={() => router.push(`/country/${encodeURIComponent(country)}`)}
-                  className="rounded-full border border-neutral-800 bg-neutral-900/50 px-4 py-2 text-sm text-neutral-400 transition-all hover:border-neutral-700 hover:bg-neutral-800/50 hover:text-neutral-200"
+                  onClick={() => handleCountryClick(country)}
+                  className={`rounded-full border px-4 py-2 text-sm transition-all ${
+                    selectedCountry === country
+                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
+                      : "border-neutral-800 bg-neutral-900/50 text-neutral-400 hover:border-neutral-700 hover:bg-neutral-800/50 hover:text-neutral-200"
+                  }`}
                 >
-                  {country
-                    .split("_")
-                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                    .join(" ")}
+                  {formatCountryName(country)}
                 </button>
               ))}
             </div>
+
+            {selectedCountry && (
+              <div ref={countryUsersRef} className="mt-10 scroll-mt-8">
+                <div className="mb-4 flex items-center justify-between">
+                  <h4 className="text-lg font-semibold text-neutral-200">
+                    Top developers in {formatCountryName(selectedCountry)}
+                  </h4>
+                  <button
+                    onClick={() => {
+                      setSelectedCountry(null);
+                      setCountryUsers([]);
+                    }}
+                    className="text-sm text-neutral-500 hover:text-neutral-300"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                {countryLoading && (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-600 border-t-neutral-300" />
+                  </div>
+                )}
+
+                {countryError && !countryLoading && (
+                  <div className="rounded-xl border border-red-900 bg-red-950/50 p-4 text-center text-red-400">
+                    {countryError}
+                  </div>
+                )}
+
+                {!countryLoading && !countryError && countryUsers.length > 0 && (
+                  <div className="space-y-2">
+                    {countryUsers.map((user, index) => (
+                      <Link
+                        key={user.login}
+                        href={`/${user.login}`}
+                        className="flex items-center gap-4 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 transition-colors hover:border-neutral-700 hover:bg-neutral-900"
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center">
+                          {index < 3 ? (
+                            <span className="text-2xl">
+                              {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                            </span>
+                          ) : (
+                            <span className="text-lg font-semibold text-neutral-500">#{index + 1}</span>
+                          )}
+                        </div>
+
+                        <Image
+                          src={user.avatarUrl}
+                          alt={user.name || user.login}
+                          width={48}
+                          height={48}
+                          className="rounded-full border border-neutral-700"
+                        />
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-neutral-100 truncate">
+                              {user.name || user.login}
+                            </span>
+                            <span className="text-sm text-neutral-500">@{user.login}</span>
+                          </div>
+                          {user.location && (
+                            <p className="text-sm text-neutral-500 truncate">{user.location}</p>
+                          )}
+                        </div>
+
+                        <div className="flex gap-6 text-right">
+                          <div>
+                            <div className="text-lg font-semibold text-emerald-400">
+                              {user.publicContributions.toLocaleString()}
+                            </div>
+                            <div className="text-xs text-neutral-500">contributions</div>
+                          </div>
+                          <div>
+                            <div className="text-lg font-semibold text-neutral-300">
+                              {user.followers.toLocaleString()}
+                            </div>
+                            <div className="text-xs text-neutral-500">followers</div>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                {!countryLoading && !countryError && countryUsers.length === 0 && (
+                  <div className="py-8 text-center text-neutral-500">
+                    No users found for this country
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

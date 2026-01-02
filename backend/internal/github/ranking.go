@@ -19,9 +19,9 @@ const (
 )
 
 type GlobalUser struct {
-	Login               string
-	Country             string
-	PublicContributions int
+	Login               string `json:"login"`
+	Country             string `json:"country"`
+	PublicContributions int    `json:"publicContributions"`
 }
 
 type RankingService struct {
