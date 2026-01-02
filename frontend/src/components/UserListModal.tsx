@@ -56,7 +56,7 @@ export function UserListModal({ username, type, onClose }: UserListModalProps) {
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl">
+      <div className="relative w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-900">
         <div className="flex items-center justify-between border-b border-neutral-800 p-4">
           <h2 className="text-lg font-semibold text-neutral-200 capitalize">
             {type}

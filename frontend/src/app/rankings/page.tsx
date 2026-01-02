@@ -135,7 +135,7 @@ export default function RankingsPage() {
             </button>
 
             {dropdownOpen && (
-              <div className="absolute z-50 mt-2 w-full rounded-xl border border-neutral-800 bg-neutral-900 shadow-xl">
+              <div className="absolute z-50 mt-2 w-full rounded-xl border border-neutral-800 bg-neutral-900">
                 <div className="border-b border-neutral-800 p-2">
                   <input
                     type="text"
